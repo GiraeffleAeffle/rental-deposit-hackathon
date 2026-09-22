@@ -63,6 +63,21 @@ For recovery, import `formatRecoveryMessage()` from `src/wallets/recovery.ts` di
 
 Verify EVM signatures against that wallet with EIP-191 message verification; verify Solana's Ed25519 signature over the exact UTF-8 message. Require a separate server-issued browser identity from enrollment and validate current Privy subject/session. A client-provided device label or header is not evidence. Another browser is not physical-device attestation: record a separate observed new-device rehearsal where that claim matters. Only pass a server-verified `{subject, walletIds, checkedAt}` recovery proof to the panel; the panel never marks recovery complete from login methods alone.
 
+These checks are implemented in `src/server/recovery.ts`. The HTTP endpoints are:
+
+| Endpoint                       | Request                    | Result                                                                                                                                                                                       |
+| ------------------------------ | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/identity`            | Bearer access token        | Verified `profile`, original `baseline`, optional `recoveryProof`, and recovery status. Issues a server-backed browser cookie if needed.                                                     |
+| `POST /api/identity/baseline`  | `{}`                       | Records the current provider-verified EVM and Solana wallets once. Requires a passkey and verified backup login. Existing originals cannot be replaced by this endpoint.                     |
+| `POST /api/identity/challenge` | `{walletId}`               | Returns `{challenge, message}` for one original wallet. Requires another issued browser cookie and a different Privy session from enrollment.                                                |
+| `POST /api/identity/verify`    | `{challengeId, signature}` | Verifies the exact stored message, atomically consumes the challenge and returns refreshed profile/status. Completes the proof after both wallets sign in the same recovery browser/session. |
+
+Every write requires the same `Origin` as `APP_ORIGIN` (or the request origin for local development), an authenticated bearer token, JSON, and the cookie issued by `GET`. The HTTPS cookie uses the `__Host-` prefix, `Secure`, `HttpOnly`, `SameSite=Strict` and `Path=/`. Only its hash is stored; supplying an arbitrary hex cookie does not establish a browser. Responses are not cached. Set `APP_ORIGIN` to the published application's exact origin in a hosted environment.
+
+Challenges expire after five minutes. A failed signature leaves the challenge available for a correct retry; a verified or expired challenge cannot be reused. Concurrent verification and proof completion are serialized by `Store.update`, so a server restart or duplicate HTTP request does not verify a nonce twice. Both signatures must belong to the same recovery browser/session; the recorded originals and checked-at time are server values. The read-only `requireWalletRecovery(store, verifiedIdentity, walletId)` gate rejects missing proof or any change to the current wallet inventory before connected finance can proceed.
+
+The seven server tests exercise actual EIP-191 and Ed25519 verification, persisted proof, replay after restart, racing duplicates, expiry, invalid signatures, wrong account/wallet/browser/session, baseline replacement, forged browser cookies and cross-origin requests. These are local cryptographic and HTTP-handler tests; they do not substitute for a real Privy login and device rehearsal.
+
 The client signing methods do not replace server validation of operation membership, immutable tenancy network/asset, quote expiry, amounts, allowed recipients, nonce or signatures. A complete connected money flow still requires finance adapter simulation, sponsored submission and durable reconciliation.
 
 ## Acceptance still to run with provider access
