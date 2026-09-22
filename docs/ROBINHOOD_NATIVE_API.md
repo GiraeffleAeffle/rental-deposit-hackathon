@@ -75,13 +75,14 @@ tenant, landlord or arbitrator address. Mutating requests also require the
 application Origin and `Content-Type: application/json`. Responses are `no-store`.
 There is no demonstration-cookie authorization on these routes.
 
-| Method and route                                       | Request / result                                                                                                    |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
-| `GET /api/finance/robinhood`                           | Fresh snapshot, assigned party wallet ID/role, configuration gates and optional preview-derived planning hints      |
-| `POST /api/finance/robinhood/operations`               | `{operationId, walletId, intent}`; lowercase UUID v4, exact allowed intent fields; returns persisted signing review |
-| `GET /api/finance/robinhood/operations/:id`            | Stored operation for the same verified subject and wallet; never takes a client transaction hash                    |
-| `POST /api/finance/robinhood/operations/:id/authorize` | `{signature}` only; verifies the stored digest and re-simulates before preparing a sponsor transaction              |
-| `POST /api/finance/robinhood/operations/:id/reconcile` | `{}`; read-only native receipt reconciliation                                                                       |
+| Method and route                                       | Request / result                                                                                                                                           |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/finance/robinhood`                           | Fresh snapshot, assigned party wallet ID/role, configuration gates and optional preview-derived planning hints                                             |
+| `POST /api/finance/robinhood/operations`               | `{operationId, walletId, intent}`; lowercase UUID v4, exact allowed intent fields; returns persisted signing review                                        |
+| `GET /api/finance/robinhood/operations/:id`            | Stored operation for the same verified subject and wallet; never takes a client transaction hash                                                           |
+| `POST /api/finance/robinhood/operations/:id/authorize` | `{signature}` only; verifies the stored digest and re-simulates before preparing a sponsor transaction                                                     |
+| `POST /api/finance/robinhood/operations/:id/retry`     | `{}` only; verifies current ownership, recovery and deployment, reconciles, then may resend the exact saved transaction without another signature or nonce |
+| `POST /api/finance/robinhood/operations/:id/reconcile` | `{}`; read-only native receipt reconciliation                                                                                                              |
 
 Amounts, shares, nonces and deadlines use unsigned decimal atomic strings. USDG
 has 6 decimals, and the reviewed vault shares have 18. There are no floats or
@@ -108,7 +109,12 @@ must reflect the parties' explicit decision if there is a shortfall. The contrac
 enforces liquidity, role, state, claims, principal, policy, consent and slippage.
 GET planning hints use current idle USDG and `previewDeposit` for supply, and
 eligible earnings and `previewWithdraw` for release, with 2 basis point integer
-bounds at the same observed block. A failed preview yields an unavailable hint;
+bounds at the same observed block. `planningHints.settle` applies the same haircut
+to `previewRedeem(trackedShares)` for the vault-specific redemption minimum; it
+uses zero when no vault shares remain. The contract independently preserves the
+approved total-assets minimum. For example, 2,000 idle USDG plus a 1,000 USDG vault
+position must not request a 3,000 USDG minimum from the vault alone.
+A failed preview yields an unavailable hint;
 it never yields an invented amount. The UI must review the final exact bounds.
 Simulations remain mandatory because a preview does not prove cash liquidity.
 
@@ -171,6 +177,24 @@ after confirmed completion or confirmed reversion. If a prepared transaction
 expires without a conclusive receipt, retain its record for operator diagnosis;
 do not delete the reservation or submit a new payment blindly.
 
+After a browser reload, load the existing operation ID and use `/retry` to resend
+saved bytes. The retry body accepts no signature, transaction hash, fee, amount or
+recipient. It never invokes sponsor transaction preparation or nonce selection.
+It can also recover the same signed envelope from the sponsor reservation after
+an interrupted operation write; `no_saved_transaction` means no signed envelope
+exists and nothing was created. The UI should save the operation ID before its
+initial planning request and use it as an untrusted locator for authenticated GET.
+
+Retry rechecks the verified party wallet, durable recovery, current compiled
+deployment, dedicated sponsor, fee ceilings and funding gates where applicable.
+It reconciles before considering a send. Confirmed, confirming, reverted and
+unverified records are not rebroadcast. A retry requires a reliable pending
+receipt observation, the original escrow nonce, a matching sponsor reservation,
+an unexpired authorization and successful simulation of the exact saved call.
+Unavailable observations, expired authorization or a changed nonce retain the
+saved record and produce an explicit error; the UI must keep reconciliation
+available and must not automatically create a replacement financial intent.
+
 Reconciliation checks the exact transaction destination, calldata and zero
 value, the canonical receipt block, the signature-authorization event, and the
 expected financial event with its exact operation nonce. Three confirmations are
@@ -198,7 +222,8 @@ EIP-1559 cryptography with injected RPC observations. It covers party/subject
 binding, unknown request fields, recovery, accepted agreement matching, funding
 allowances, duplicate and concurrent requests, gas/fee/recipient tampering,
 interrupted database writes, an expired preparation lease, ambiguous broadcast,
-database restart, and exact receipt reconciliation. These tests make no network
+database restart without re-signing, authenticated retry gates, partial-vault
+settlement bounds, and exact receipt reconciliation. These tests make no network
 transactions. The compiled-runtime check also tests altered immutable values and
 rejects modified program bytes. Run:
 

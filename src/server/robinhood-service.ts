@@ -324,7 +324,7 @@ export async function readPlanningHints(
   snapshot: EscrowSnapshot,
 ) {
   const blockNumber = atomic(snapshot.blockNumber);
-  const [supply, release] = await Promise.allSettled([
+  const [supply, release, settle] = await Promise.allSettled([
     (async () => {
       const assets = await client.readContract({
         address: config.manifest.asset.address,
@@ -367,6 +367,26 @@ export async function readPlanningHints(
         maxSharesBurned: (padded < tracked ? padded : tracked).toString(),
       };
     })(),
+    (async () => {
+      if (snapshot.state !== 5) return null;
+      const tracked = atomic(snapshot.trackedShares);
+      const preview =
+        tracked === 0n
+          ? 0n
+          : await client.readContract({
+              address: config.manifest.vault,
+              abi: morphoVaultAbi,
+              functionName: 'previewRedeem',
+              args: [tracked],
+              blockNumber,
+            });
+      // This bound applies only to vault redemption. The contract separately
+      // checks total cash against the approved minimumSettlementAssets.
+      return {
+        kind: 'settle' as const,
+        minRedeemedAssets: ((preview * 9998n) / 10000n).toString(),
+      };
+    })(),
   ]);
   return {
     observedAt: snapshot.observedAt,
@@ -374,8 +394,9 @@ export async function readPlanningHints(
     slippageBps: 2,
     supply: supply.status === 'fulfilled' ? supply.value : null,
     releaseEarnings: release.status === 'fulfilled' ? release.value : null,
+    settle: settle.status === 'fulfilled' ? settle.value : null,
     status:
-      supply.status === 'rejected' || release.status === 'rejected'
+      supply.status === 'rejected' || release.status === 'rejected' || settle.status === 'rejected'
         ? 'partially_unavailable'
         : 'available',
     evidence: 'accounting-previews-require-exact-simulation',
@@ -957,12 +978,31 @@ export function createRobinhoodService(dependencies: Dependencies) {
     )
       return publicRobinhoodOperation(record);
     if (intentExpired(record, now())) return publicRobinhoodOperation(record);
-    await store.update<RobinhoodOperation>(operationKey(id), (current) => ({
-      ...current,
-      revision: current.revision + 1,
-      broadcastAttempts: current.broadcastAttempts + 1,
-      updatedAt: iso(now()),
-    }));
+    return publicRobinhoodOperation(await broadcastSaved(record));
+  }
+
+  async function broadcastSaved(record: RobinhoodOperation) {
+    record = await store.update<RobinhoodOperation>(operationKey(record.id), (current) => {
+      if (['completed', 'reverted', 'unverified', 'confirming'].includes(current.state))
+        return current;
+      if (
+        current.transactionHash !== record.transactionHash ||
+        current.rawTransaction !== record.rawTransaction
+      )
+        throw new RobinhoodServiceError('operation_changed', 'The stored transaction changed.');
+      return {
+        ...current,
+        revision: current.revision + 1,
+        broadcastAttempts: current.broadcastAttempts + 1,
+        updatedAt: iso(now()),
+      };
+    });
+    if (['completed', 'reverted', 'unverified', 'confirming'].includes(record.state)) return record;
+    if (intentExpired(record, now()))
+      throw new RobinhoodServiceError(
+        'expired_saved_transaction',
+        'The saved authorization expired before broadcast. Retain its operation ID and reconcile the existing hash.',
+      );
     let state: 'submitted' | 'broadcast_unknown' = 'submitted';
     try {
       const reported = await client.sendRawTransaction({
@@ -973,12 +1013,125 @@ export function createRobinhoodService(dependencies: Dependencies) {
     } catch {
       state = 'broadcast_unknown';
     }
-    record = await store.update<RobinhoodOperation>(operationKey(id), (current) =>
+    return store.update<RobinhoodOperation>(operationKey(record.id), (current) =>
       ['completed', 'reverted', 'unverified', 'confirming'].includes(current.state)
         ? current
         : { ...current, revision: current.revision + 1, state, updatedAt: iso(now()) },
     );
-    return publicRobinhoodOperation(record);
+  }
+
+  /** Only an already-persisted envelope can enter this path; never signs or selects a nonce. */
+  async function retry(identity: VerifiedIdentity, id: string, input: unknown) {
+    exactKeys(object(input), []);
+    let record = await owned(identity, id);
+    await requireRecovery(store, identity, record.walletId);
+    if (!config.sendEnabled || !config.sponsor)
+      throw new RobinhoodServiceError(
+        'unconfigured',
+        'Native relay sending is disabled. The saved transaction remains available for reconciliation.',
+        503,
+      );
+    const snapshot = await observe();
+    const wallet = partyWallet(identity, snapshot, record.walletId);
+    const configuredSponsor = privateKeyToAccount(config.sponsor.privateKey).address;
+    if (
+      [snapshot.tenant, snapshot.landlord, snapshot.arbitrator, snapshot.personalWallet].some(
+        (party) => sameAddress(party, configuredSponsor),
+      )
+    )
+      throw new RobinhoodServiceError(
+        'unconfigured',
+        'Use a dedicated gas sponsor account separate from every party and portfolio.',
+        503,
+      );
+
+    // Recover a previous interrupted operation write, using its durable envelope.
+    // No replacement is created when the reservation contains no signed bytes.
+    if (!record.rawTransaction) {
+      const saved = await store.get<SponsorReservation>(reservationKey(config, configuredSponsor));
+      const envelope = saved?.operationId === id ? saved.prepared : undefined;
+      if (!envelope || envelope.digest !== record.digest)
+        throw new RobinhoodServiceError(
+          'no_saved_transaction',
+          'This operation has no saved signed transaction to retry.',
+        );
+      record = await store.update<RobinhoodOperation>(operationKey(id), (current) => {
+        if (current.rawTransaction) return current;
+        if (current.state !== 'planned' || current.digest !== envelope.digest)
+          throw new RobinhoodServiceError('operation_changed', 'The stored operation changed.');
+        return {
+          ...current,
+          ...envelope,
+          revision: current.revision + 1,
+          state: 'prepared',
+          updatedAt: iso(now()),
+        };
+      });
+    }
+    if (
+      !record.relayPlan ||
+      !record.transactionHash ||
+      !record.signature ||
+      !record.sponsorAddress ||
+      !sameAddress(record.sponsorAddress, configuredSponsor) ||
+      record.relayPlan.relayAuthorization?.digest !== record.digest ||
+      !sameAddress(record.relayPlan.requiredSigner, record.walletAddress)
+    )
+      throw new RobinhoodServiceError(
+        'saved_transaction_mismatch',
+        'The saved transaction does not match this configured sponsor and authorization.',
+        503,
+      );
+    await assertSignature(record.digest, record.signature, record.walletAddress);
+    const checked = await assertSponsoredTransaction(
+      record.rawTransaction!,
+      record.relayPlan,
+      configuredSponsor,
+      config.sponsor,
+    );
+    if (
+      checked.transactionHash !== record.transactionHash ||
+      checked.sponsorNonce !== record.sponsorNonce
+    )
+      throw new RobinhoodServiceError(
+        'saved_transaction_mismatch',
+        'The saved transaction hash or nonce changed.',
+        503,
+      );
+
+    record = await reconcileRobinhoodRecord(store, client, config, record, now());
+    if (['completed', 'reverted', 'unverified', 'confirming'].includes(record.state))
+      return publicRobinhoodOperation(record);
+    if (intentExpired(record, now()))
+      throw new RobinhoodServiceError(
+        'expired_saved_transaction',
+        'This saved authorization expired. Retain the operation and reconcile its existing hash; no new transaction was created.',
+      );
+    if (record.reconciliation?.status !== 'pending')
+      throw new RobinhoodServiceError(
+        'observation_unavailable',
+        'A reliable pending receipt observation is required before retrying. The saved transaction remains unchanged.',
+        503,
+      );
+    if (snapshot.nonce !== record.nativePlan.expectedNonce)
+      throw new RobinhoodServiceError(
+        'nonce_changed',
+        'The escrow nonce changed. Reconcile the saved transaction; do not create a replacement payment.',
+      );
+    const reservation = await store.get<SponsorReservation>(
+      reservationKey(config, configuredSponsor),
+    );
+    if (
+      reservation?.operationId !== id ||
+      reservation.prepared?.rawTransaction !== record.rawTransaction
+    )
+      throw new RobinhoodServiceError(
+        'reservation_changed',
+        'The sponsor reservation no longer matches this saved transaction. Retain the operation for reconciliation.',
+      );
+    if (record.intent.kind === 'fund') await fundingGate(snapshot, wallet, identity);
+    await simulateEscrowCall(client, record.relayPlan!);
+    return publicRobinhoodOperation(await broadcastSaved(record));
   }
 
   async function status(identity: VerifiedIdentity, id: string) {
@@ -990,7 +1143,7 @@ export function createRobinhoodService(dependencies: Dependencies) {
       await reconcileRobinhoodRecord(store, client, config, record, now()),
     );
   }
-  return { observation, plan, authorize, status, reconcile };
+  return { observation, plan, authorize, retry, status, reconcile };
 }
 
 function intentExpired(record: RobinhoodOperation, now: bigint) {

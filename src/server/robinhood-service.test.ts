@@ -128,6 +128,7 @@ function fixture(store: Store = new LocalStore(':memory:'), config = configurati
     confirmations: 3n,
     simulationFailure: false,
     previewUnavailable: false,
+    receiptUnavailable: false,
     time: now,
   };
   let latestRaw: Hex | undefined;
@@ -146,6 +147,10 @@ function fixture(store: Store = new LocalStore(':memory:'), config = configurati
         return 3000000000000000000000n;
       }
       if (functionName === 'previewWithdraw') return 10000000000000000000n;
+      if (functionName === 'previewRedeem') {
+        if (controls.previewUnavailable) throw new Error('RPC failed');
+        return 1000000000n;
+      }
       if (functionName === 'fixedChainId') return 4663n;
       const value = observed[functionName as keyof EscrowSnapshot];
       if (typeof value === 'string' && /^[0-9]+$/.test(value)) return BigInt(value);
@@ -172,6 +177,7 @@ function fixture(store: Store = new LocalStore(':memory:'), config = configurati
       return keccak256(serializedTransaction);
     },
     getTransactionReceipt: async ({ hash }: { hash: Hex }) => {
+      if (controls.receiptUnavailable) throw new Error('Receipt RPC unavailable');
       if (!controls.receipt) {
         const error = new Error('Not found');
         error.name = 'TransactionReceiptNotFoundError';
@@ -462,6 +468,36 @@ test('read-only planning hints use atomic previews with 2 bps bounds and preserv
   await f.store.close();
 });
 
+test('settlement hint bounds only vault redemption and preserves the total settlement floor', async () => {
+  const f = fixture();
+  f.observed.state = 5;
+  f.observed.securityValue = '3000000000';
+  f.observed.minimumSettlementAssets = '3000000000';
+  f.observed.trackedShares = '1000000000000000000000';
+  const observed = await f.service.observation(identity);
+  assert.deepEqual(observed.planningHints.settle, {
+    kind: 'settle',
+    minRedeemedAssets: '999800000',
+  });
+  assert.equal(observed.snapshot.minimumSettlementAssets, '3000000000');
+  const planned = await f.service.plan(identity, {
+    operationId: id(1),
+    walletId: identity.wallets[0].id,
+    intent: observed.planningHints.settle,
+  });
+  assert.equal(planned.action.limit, '999800000');
+  assert.equal(f.observed.minimumSettlementAssets, '3000000000');
+  f.controls.previewUnavailable = true;
+  const unavailable = await f.service.observation(identity);
+  assert.equal(unavailable.planningHints.settle, null);
+  assert.equal(unavailable.planningHints.status, 'partially_unavailable');
+  f.observed.trackedShares = '0';
+  const idleOnly = await f.service.observation(identity);
+  assert.deepEqual(idleOnly.planningHints.settle, { kind: 'settle', minRedeemedAssets: '0' });
+  assert.equal(idleOnly.snapshot.minimumSettlementAssets, '3000000000');
+  await f.store.close();
+});
+
 test('operation UUID binds exact terms and returns the original durable plan on retry', async () => {
   const f = fixture();
   const original = await f.plan();
@@ -553,7 +589,7 @@ test('raw transaction and hash survive ambiguous broadcast and restart; retry re
     store = new LocalStore(filename);
     const second = fixture(store);
     second.controls.failBroadcast = false;
-    const retried = await second.service.authorize(identity, id(1), { signature });
+    const retried = await second.service.retry(identity, id(1), {});
     assert.equal(retried.state, 'submitted');
     assert.equal(second.effects.nonceReads, 0);
     assert.deepEqual(second.effects.broadcasts, f.effects.broadcasts);
@@ -580,6 +616,127 @@ test('concurrent duplicate authorizations persist and broadcast only one unique 
     if (result.status === 'rejected') assert.equal(result.reason.code, 'operation_preparing');
   assert.equal(new Set(f.effects.broadcasts).size, 1);
   assert.equal((await f.store.scan('native:robinhood:operation:')).length, 1);
+  await f.store.close();
+});
+
+test('retry requires a saved envelope and rejects client signatures, hashes and new terms', async () => {
+  const f = fixture();
+  await f.plan();
+  await assert.rejects(() => f.service.retry(identity, id(1), {}), /no saved signed transaction/);
+  for (const input of [
+    { signature: '0x' },
+    { transactionHash: blockHash },
+    { nonce: '8' },
+    { recipient: stranger.address },
+  ]) {
+    await assert.rejects(() => f.service.retry(identity, id(1), input), /Unexpected/);
+  }
+  assert.equal(f.effects.nonceReads, 0);
+  assert.equal(f.effects.broadcasts.length, 0);
+  await f.store.close();
+});
+
+test('retry rechecks account, recovery, current party, deployment and explicit send enablement', async () => {
+  const f = fixture();
+  await f.plan();
+  f.controls.failBroadcast = true;
+  await f.service.authorize(identity, id(1), { signature: await f.sign() });
+  await assert.rejects(
+    () => f.service.retry({ ...identity, subject: 'did:privy:other' }, id(1), {}),
+    /another verified account/,
+  );
+  f.controls.recovery = false;
+  await assert.rejects(() => f.service.retry(identity, id(1), {}), /recovery check/);
+  f.controls.recovery = true;
+  f.config.sendEnabled = false;
+  await assert.rejects(() => f.service.retry(identity, id(1), {}), /disabled/);
+  f.config.sendEnabled = true;
+  f.observed.tenant = stranger.address;
+  await assert.rejects(() => f.service.retry(identity, id(1), {}), /not an assigned party/);
+  f.observed.tenant = tenant.address;
+  const verifyRuntime = createRobinhoodService({ ...f.dependencies, observe: undefined });
+  await assert.rejects(() => verifyRuntime.retry(identity, id(1), {}), /code does not match/);
+  assert.equal(f.effects.broadcasts.length, 1);
+  assert.equal(f.effects.nonceReads, 1);
+  await f.store.close();
+});
+
+test('retry first reconciles completed or confirming receipts without rebroadcast or signing', async () => {
+  const f = fixture();
+  await f.plan();
+  await f.service.authorize(identity, id(1), { signature: await f.sign() });
+  f.controls.receipt = true;
+  f.controls.confirmations = 1n;
+  assert.equal((await f.service.retry(identity, id(1), {})).state, 'confirming');
+  f.controls.confirmations = 3n;
+  assert.equal((await f.service.retry(identity, id(1), {})).state, 'completed');
+  assert.equal(f.effects.broadcasts.length, 1);
+  assert.equal(f.effects.nonceReads, 1);
+  await f.store.close();
+});
+
+test('retry preserves expired, unavailable and changed-nonce transactions without replacement sends', async () => {
+  for (const reason of ['expired', 'unavailable', 'nonce'] as const) {
+    const f = fixture();
+    await f.plan();
+    f.controls.failBroadcast = true;
+    await f.service.authorize(identity, id(1), { signature: await f.sign() });
+    const original = (await f.store.get<RobinhoodOperation>(operationKey(id(1))))!;
+    if (reason === 'expired') f.controls.time += 301n;
+    if (reason === 'unavailable') f.controls.receiptUnavailable = true;
+    if (reason === 'nonce') f.observed.nonce = '1';
+    const expected =
+      reason === 'expired'
+        ? 'expired_saved_transaction'
+        : reason === 'unavailable'
+          ? 'observation_unavailable'
+          : 'nonce_changed';
+    await assert.rejects(
+      () => f.service.retry(identity, id(1), {}),
+      (error) => error instanceof RobinhoodServiceError && error.code === expected,
+    );
+    const retained = (await f.store.get<RobinhoodOperation>(operationKey(id(1))))!;
+    assert.equal(retained.rawTransaction, original.rawTransaction);
+    assert.equal(retained.transactionHash, original.transactionHash);
+    assert.equal(retained.state, 'broadcast_unknown');
+    assert.equal(f.effects.broadcasts.length, 1);
+    assert.equal(f.effects.nonceReads, 1);
+    const reservation = await f.store.get<{ operationId: string }>(
+      `native:robinhood:sponsor:4663:${sponsor.address.toLowerCase()}`,
+    );
+    assert.equal(reservation?.operationId, id(1));
+    await f.store.close();
+  }
+});
+
+test('retry cannot substitute a stored transaction recipient or silently switch the gas sponsor', async () => {
+  const f = fixture();
+  await f.plan();
+  f.controls.failBroadcast = true;
+  await f.service.authorize(identity, id(1), { signature: await f.sign() });
+  const original = (await f.store.get<RobinhoodOperation>(operationKey(id(1))))!;
+  f.config.sponsor!.privateKey = key(15);
+  await assert.rejects(() => f.service.retry(identity, id(1), {}), /configured sponsor/);
+  f.config.sponsor!.privateKey = key(14);
+  const altered = await sponsor.signTransaction({
+    type: 'eip1559',
+    chainId: 4663,
+    to: stranger.address,
+    data: original.relayPlan!.data,
+    value: 0n,
+    nonce: original.sponsorNonce!,
+    gas: 120000n,
+    maxFeePerGas: 2n,
+    maxPriorityFeePerGas: 1n,
+  });
+  await f.store.update<RobinhoodOperation>(operationKey(id(1)), (current) => ({
+    ...current,
+    rawTransaction: altered,
+    transactionHash: keccak256(altered),
+  }));
+  await assert.rejects(() => f.service.retry(identity, id(1), {}), /exact-call or fee/);
+  assert.equal(f.effects.broadcasts.length, 1);
+  assert.equal(f.effects.nonceReads, 1);
   await f.store.close();
 });
 
@@ -613,7 +770,7 @@ test('a crash between sponsor persistence and operation persistence resumes the 
   );
   assert.ok(reservation?.prepared.rawTransaction);
   fail = false;
-  const resumed = await f.service.authorize(identity, id(1), { signature });
+  const resumed = await f.service.retry(identity, id(1), {});
   assert.equal(resumed.state, 'submitted');
   assert.equal(f.effects.nonceReads, 1);
   assert.equal(f.effects.broadcasts[0], reservation.prepared.rawTransaction);
