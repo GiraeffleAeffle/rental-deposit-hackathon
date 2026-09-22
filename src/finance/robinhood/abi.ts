@@ -66,4 +66,5 @@ export const morphoVaultAbi = parseAbi([
   'function decimals() view returns (uint8)',
   'function previewRedeem(uint256 shares) view returns (uint256)',
   'function previewWithdraw(uint256 assets) view returns (uint256)',
+  'function previewDeposit(uint256 assets) view returns (uint256)',
 ]);

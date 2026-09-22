@@ -32,8 +32,6 @@ export async function reconcileReceipt(
     if ((await client.getChainId()) !== plan.chainId)
       return { status: 'unverified', transactionHash: hash, reason: 'RPC chain mismatch' };
     const receipt = await client.getTransactionReceipt({ hash });
-    if (receipt.status !== 'success')
-      return { status: 'reverted', transactionHash: hash, reason: 'Native transaction reverted' };
     const tx = await client.getTransaction({ hash });
     if (
       !tx.to ||
@@ -57,6 +55,16 @@ export async function reconcileReceipt(
         status: 'pending',
         transactionHash: hash,
         reason: 'Receipt block is no longer canonical',
+      };
+    const confirmations = head >= receipt.blockNumber ? head - receipt.blockNumber + 1n : 0n;
+    if (receipt.status !== 'success')
+      return {
+        status: confirmations >= requiredConfirmations ? 'reverted' : 'pending',
+        transactionHash: hash,
+        reason:
+          confirmations >= requiredConfirmations
+            ? 'Native transaction reverted'
+            : 'Waiting for confirmations of the reverted transaction',
       };
     if (
       plan.relayAuthorization &&
@@ -102,7 +110,6 @@ export async function reconcileReceipt(
             .filter(([key, value]) => key !== 'operationNonce' && typeof value === 'bigint')
             .map(([key, value]) => [key, String(value)]),
         );
-        const confirmations = head >= receipt.blockNumber ? head - receipt.blockNumber + 1n : 0n;
         return {
           status: confirmations >= requiredConfirmations ? 'completed' : 'confirming',
           transactionHash: hash,
