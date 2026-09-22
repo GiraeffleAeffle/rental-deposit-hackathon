@@ -1,44 +1,61 @@
 # Deposit workspace
 
-A new rental deposit product taking shape: shared records for tenants, landlords, and human arbitrators, with a separate path toward personal savings.
+**Build assets while renting.** A tenant's eligible deposit earnings can become contributions to a separate personal portfolio. Landlords retain a bounded rental-security workflow; assigned human arbitrators can resolve disputed claims. The product name is still undecided.
 
-**Status: interactive product prototype.** All people, homes, balances, records, and transactions are fictional. No bank, wallet, investment account, authentication service, or blockchain is connected. The product name and chain decision remain open. `rental-deposit-hackathon` is a temporary repository label, not the brand.
+This public hackathon implementation explores **Robinhood Chain and Solana in parallel**. It includes a persistent walkthrough, verified-account and private-agreement services, restricted native escrows, and signing/reconciliation APIs. Local native proofs passed on both stacks. **A complete live investment flow and production deployment are not yet proved.** See [implementation status](docs/IMPLEMENTATION_STATUS.md) for the exact boundaries.
 
-## Try it
+## Run locally
 
-Use Node.js 22.18+ or Node.js 24 LTS.
+Use Node.js 24 LTS (minimum 22.18).
 
 ```sh
 npm ci --ignore-scripts
+npm run setup
 npm run dev
 ```
 
-Open `http://127.0.0.1:3000`.
+Open [the workspace](http://127.0.0.1:4175). Setup creates a private `.env.local` without printing secrets. The walkthrough works without accounts, wallets or funds and persists in local SQLite across reloads. All walkthrough people, homes, balances and transactions are fictional; the role selector belongs only to this demonstration.
 
-1. Start as **Tenant** and open the $120 claim against an $800 deposit.
-2. Read the sample condition records. Agree to the deduction, or request human review.
-3. Switch to **Landlord** to see held funds separately from unfunded requests and pending claims.
-4. For a disputed claim, switch to **Arbitrator**, enter an allocation and a reason, and record the decision.
-5. Simulate the agreed payout and download the sample settlement record.
-6. Explore a personal savings plan or compare a deposit, installments, and a monthly-fee alternative.
+1. Choose Robinhood or Solana. Accept the agreement as tenant and landlord.
+2. As tenant, review and authorize the 3,000-unit deposit, then check its result and supply it to lending.
+3. Add the explicitly labeled 10-unit sample return, release it, and review a personal investment. Optional savings go to personal cash separately.
+4. Review accumulated investment exposure. It creates no second cash dividend.
+5. As landlord, propose a 120-unit claim. The tenant can agree or dispute it; only the assigned arbitrator can decide a disputed allocation.
+6. Authorize and reconcile settlement. A 120-unit allocation returns 2,880 of the original security to the tenant. Personal holdings remain theirs and can subsequently be sold and withdrawn in the walkthrough.
+7. Open **Connections** for native proof details, real read-only Jupiter prices and provider setup status.
 
-The role switch is a demonstration tool, not access control. State is held in memory and resets on reload. Do not enter personal data.
+Every financial action has a review, an explicit authorization and a separate result check. A failed purchase leaves personal cash intact. A claim decision alone does not pay anyone.
 
-## What is implemented
+## Architecture
 
-- Responsive three-role workspace with a single shared case state.
-- Pending claim → agreement or dispute → reasoned human decision → simulated payout.
-- Exact integer-cent accounting and fixed allocation totals; requested money is excluded from held balances.
-- Sample records, activity history, and a downloadable fictional ledger.
-- Personal savings illustration that starts at zero and excludes the held deposit.
-- Comparison of refundable deposits, no-fee installments, and an illustrative monthly-fee alternative.
-- Local fonts and artwork; no third-party tracking or external font requests.
+```mermaid
+flowchart LR
+  A[Accepted tenancy] --> B[Restricted rental escrow]
+  B --> C[Supply-only lending]
+  C --> D[Eligible earnings release]
+  D --> E[Tenant personal cash]
+  S[Optional savings] --> E
+  E --> F[Authorized investment]
+  F --> G[Personal holding]
+  G --> H[Authorized sale]
+  H --> E
+  E --> W[Personal withdrawal]
+  C --> I[Agreed or arbitrated allocation]
+  I --> J[Reconciled security settlement]
+```
 
-## What is not implemented
+| Layer          | Implemented choice                                                                                   |
+| -------------- | ---------------------------------------------------------------------------------------------------- |
+| Shared product | Next.js 16 / React 19, exact native token units, separate security and portfolio records             |
+| Persistence    | SQLite locally; PostgreSQL for hosted operation; durable intent and receipt records                  |
+| Identity       | Privy passkeys, backup access, user-owned EVM/Solana wallets and server-verified recovery challenges |
+| Robinhood      | USDG, immutable Solidity escrow, Morpho adapter, bounded EIP-712 gas sponsor                         |
+| Solana         | Test-only Anchor escrow, USDC, validated Kamino CPI, separate message-bound fee sponsor              |
+| Investments    | Gated 0x/Jupiter adapters; keyless Jupiter price inspection; live buys/sales remain a proof gate     |
 
-Real signing, custody, interest accrual, investment execution, identity verification, private documents, statutory deadlines, appeals, account recovery, provider onboarding, and production operations are still future work. There is no deployable custody contract in this repository. The state reducer is not a financial authorization boundary.
+Account credentials being present is not a successful onboarding test. Native APIs authenticate actual provider identities and fixed tenancy roles; they never inherit the walkthrough's role selector or balances. The sponsor pays fees and receives no general investment authority.
 
-The current recommendation is **Solana for a focused Colosseum entry**, balancing its $100,000 track pool against a broader ecosystem. **Base or Arbitrum** preserve more Solidity/Aave/Safe work with $25,000 pools. **Tempo** remains a credible payments option and has Morpho deployments, but is not automatically the best fit for the ownership vision. A final choice has not been made. See [the decision brief](docs/MARKET_AND_CHAIN_DECISION.md).
+Read the [build spec](docs/HACKATHON_BUILD_SPEC.md), [ADRs](docs/adr/README.md), [wallet setup](docs/WALLET_SETUP.md), [Robinhood operator guide](docs/ROBINHOOD_NATIVE_API.md), and [Solana operator guide](docs/SOLANA_NATIVE_API.md).
 
 ## Validate
 
@@ -46,22 +63,26 @@ The current recommendation is **Solana for a focused Colosseum entry**, balancin
 npm test
 npm run lint
 npm run build
+# Against the running local server; uses fresh fictional sessions:
+npm run acceptance
+# One authenticated reconciliation pass; schedule separately for hosted operation:
+npm run reconcile
 ```
 
-The tests cover the simulation's balance accounting, role transitions, allocation limits, repeated payout prevention, exact money parsing, and savings assumptions. They do not establish production security or legal compliance.
+[Validation evidence](docs/VALIDATION.md) distinguishes application tests, actual local protocol execution, public price observations and unperformed live acceptance. Native contract/program commands are in [the EVM guide](contracts/evm/README.md) and [the Solana guide](programs/rental_escrow/README.md).
 
 ## Project map
 
-- `app/` — Next.js app, metadata, and responsive styles.
-- `src/components/workspace.tsx` — role-based product experience.
-- `src/domain/rental.ts` — demonstration state transitions and money calculations.
-- `src/domain/rental.test.ts` — meaningful tests for accounting and authorization-like simulation rules.
-- `docs/` — market research, architecture, and the next implementation slices.
+- `src/domain/` — exact amounts, demonstration accounting and savings illustrations.
+- `src/server/` — authenticated tenancy/evidence services, persistence, recovery and native operation orchestration.
+- `src/wallets/` — account onboarding and user-controlled signatures.
+- `src/finance/` — independent native observations, transaction plans and receipt validation.
+- `contracts/evm/` and `programs/rental_escrow/` — restricted custody implementations and native tests.
+- `src/components/` and `app/` — role journeys, connection controls and same-origin APIs.
+- `docs/` — build scope, decisions, evidence and operator handoff.
 
-## Prior work and hackathon provenance
+## Provenance and scope
 
-This project grows out of the earlier **Smart Rental Deposit** Gnosis prototype. That work predates the competition and informed the domain and product exploration. This repository is a new implementation of the interface and simulation, prepared on September 21, 2026. It does not copy the previous app's backend, environment files, tenant records, keys, git history, or launch claims.
+This work grows out of the earlier **Smart Rental Deposit** Gnosis prototype. Pre-existing product research and tenancy rules informed this implementation. The new public interface started on September 21, 2026; the parallel native implementation and selected architecture records were added on September 22. The prior private checkout reference was `07573bd3fa66f1af6c99b2d264af39ee767154a3`, with additional uncommitted work. This is a review reference, not a complete competition baseline. The submission must disclose prior work and distinguish competition-period changes. See the [official hackathon rules](https://colosseum.com/legal/Crypto%20World%27s%20Fair%20Hackathon%20Rules.pdf).
 
-The prior local checkout was at `07573bd3fa66f1af6c99b2d264af39ee767154a3` (May 10, 2026), with additional uncommitted work. That is a review reference, not a complete September 14 baseline. Disclose all pre-existing work in the submission and identify the actual competition-period changes. A new repository alone does not make an old project newly eligible. [Colosseum rules](https://colosseum.com/legal/Crypto%20World%27s%20Fair%20Hackathon%20Rules.pdf).
-
-No submission, registration, partner approval, or real-money deployment has been performed. Public source visibility is not a license decision; a project license remains to be chosen.
+This repository does not contain the private backend, tenant data, environment files, keys or old Git history. No hackathon submission, financial-provider approval, bank transfer or real-money deployment has been performed. RealT, insurance pooling, borrowing, guaranteed returns and automatic recurring investment are outside this version. Public visibility is not a project-wide license decision; that remains to be chosen.

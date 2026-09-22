@@ -1,5 +1,7 @@
 # Implementation plan
 
+> Historical prototype exploration. Current scope and evidence are in the [build spec](HACKATHON_BUILD_SPEC.md) and [implementation status](IMPLEMENTATION_STATUS.md).
+
 ## Current boundary
 
 The app is a Next.js/React prototype. Browser state and a pure TypeScript reducer drive fictional role workflows. It has no backend authorization boundary, external finance integration, or persistent tenant data. The frontend and legal illustrations are useful while the brand and chain are undecided.

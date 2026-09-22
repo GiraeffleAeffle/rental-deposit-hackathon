@@ -1,22 +1,33 @@
-# Prototype validation
+# Implementation validation
 
-Validated September 21, 2026. This evidence concerns the new interface and local simulation only.
+Validated 22 September 2026. This record supersedes the September 21 interface-only prototype report. The native guides retain their exact source blocks, executable hashes, synthetic fixture assumptions and replay commands.
 
-| Check | Result |
-| --- | --- |
-| `npm test` | 6 tests pass: accounting, agreement and dispute paths, role restrictions, allocation limits, repeat payout, exact cents, retained tenant statement, and savings assumptions. |
-| `npm run lint` | TypeScript and Next/React ESLint checks pass. |
-| `npm run build` | Next.js 16.3.5 production build passes. |
-| Dependency installation audit | No known vulnerabilities reported by npm for the pinned dependency tree at installation time. Not a security audit. |
-| Browser: agreed path | Tenant acceptance creates a recorded allocation while the $800 stays held. |
-| Browser: disputed path | Tenant requests review; a reason is required for an arbitrator decision; an allocation above the $120 claim is blocked. |
-| Browser: payout | A $60/$740 sample allocation pays only after a recorded decision. Held portfolio total drops from $2,000 to $1,200; the unfunded $800 request remains separate. |
-| Browser: records and calculators | Sample dialog opens/closes, savings input updates the projection, and mobile navigation reaches the deposit comparison. |
-| Responsive layout | Measured DOM widths of 390 and 320 CSS pixels show no horizontal page overflow; all three role overviews checked at 320. |
-| Browser console | No captured errors or warnings in the reviewed flows. |
+| Check                            | Evidence                                                                                                                                                                                                                                                                                                                           |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm test`                       | **115 application, native-adapter and server tests pass.** Coverage includes exact balances, independent personal savings, verified identities, original-wallet recovery, private agreement membership, immutable operation intent, duplicate/racing requests, deployment substitution, fee caps and persistence before broadcast. |
+| `npm run lint`                   | Next route generation, strict TypeScript and React/Next ESLint pass.                                                                                                                                                                                                                                                               |
+| `npm run build`                  | Next.js 16.3.5 production build passes; optional SDK warning recorded below.                                                                                                                                                                                                                                                       |
+| `npm run acceptance`             | Four full HTTP journeys: ordinary and contested settlement on each network, plus foreign sessions, role restrictions, stale revisions, failed investment retry, liquidity gates and persisted reloads. 216 local HTTP requests; all money effects are labeled fixtures. Both native APIs reject demo-only authentication.          |
+| `npm run reconcile`              | Authenticated worker resumes/scans persisted demonstration records and reports native configurations unavailable. It does not fabricate connected receipts or send unsigned operations.                                                                                                                                            |
+| Robinhood local EVM              | 25 contract tests, including 256-run conservation fuzzing, bounded typed signatures, wrong roles, replay, share limits, losses, reentrancy and settlement.                                                                                                                                                                         |
+| Robinhood actual protocol fork   | Two passing tests at mainnet block 69,829,067 with actual USDG/Morpho code. Balance funding and 90-day time progression are synthetic local fixtures. No broadcast occurred.                                                                                                                                                       |
+| Solana host/native runtime       | Eight Rust host tests and three LiteSVM tests using the compiled escrow and actual pinned KLend program. The 3,000 → 10 → 120 → 2,880 lifecycle executes in the SVM. This is not a deployed devnet market.                                                                                                                         |
+| Jupiter price route              | Live keyless 10-USDC request succeeded through the application, returning a price-only response with no transaction. Preserved 5/10/25-USDC observations are in `docs/evidence/`.                                                                                                                                                  |
+| Browser walkthrough              | Full Solana fixture lifecycle, review-before-authorize, separate result check, claim settlement, independent holdings, sale/withdrawal and reload persistence. Optional 25-unit savings increase only personal funds.                                                                                                              |
+| Browser illustration/connections | Eight-year projection, separate contribution total, provider setup-pending state and actual price-only quote refresh inspected.                                                                                                                                                                                                    |
+| Responsive layout                | Normal 630 CSS-pixel layout visually inspected; narrow measured page widths of 433 and 355 CSS pixels have no document overflow. Temporary viewport overrides were reset.                                                                                                                                                          |
 
-Desktop appearance was visually inspected. The in-app browser's viewport screenshot output showed rendering artifacts during phone emulation, so mobile visual verification is limited to DOM geometry and interactive checks; repeat on a physical phone before submission.
+The in-app browser's viewport overrides do not match requested CSS sizes exactly and can produce tiled screenshot artifacts. The narrow checks are DOM/interaction evidence, not physical-phone visual acceptance. Repeat the final consumer journey on a real phone and a second device once provider access is configured.
 
-TypeScript is pinned to 6.0.3 because the current TypeScript ESLint integration does not support the TypeScript 7 API. ESLint is pinned to 9.39.5 because Next's bundled React plugin fails against ESLint 10. Revisit these toolchain pins when upstream compatibility is available.
+## Toolchain and dependency observations
 
-No blockchain, real bank account, private evidence storage, authentication, investment eligibility, statutory workflow, or real-money custody was tested. Those systems are not implemented in this repository.
+- Node 25.2.1 was used locally; Node 24 LTS is the documented and CI target. Local `node:sqlite` emits an experimental-feature warning. Hosted operation uses PostgreSQL rather than ephemeral local storage.
+- TypeScript is pinned to 5.9.3 for the Solana Kit/Privy dependency combination, and ESLint to 9.39.5 for the Next plugin. Dependencies are recorded in the lockfile.
+- The final npm advisory check reports **23 moderate, zero high and zero critical findings** in the transitive dependency tree. A compatible `ws` patch override removed the previously reported high finding. The remaining advisories, including provider-wallet dependencies, require review before production. Do not apply an unreviewed major-version audit fix merely to clear the count.
+- The build warns that Privy's optional `@farcaster/mini-app-solana` module is absent. This app does not enable Farcaster mini-app login; ordinary account hooks compile. A real configured-wallet rehearsal is still required, and the warning is not concealed as a passing provider test.
+
+CI runs application tests/lint/build and local HTTP acceptance, local EVM tests plus the compiled runtime fingerprint check, and Rust host tests. Network fork and SBF/LiteSVM proofs have separate documented replay requirements; a host test is not counted as an SVM execution test.
+
+## Not yet verified
+
+Provider account activation, physical-device passkeys/recovery, a deployed native tenancy, complete sponsored funding including initial allowance/account creation, eligible live stock-token buy/sell fills, actual personal cash exit, fiat banking, hosted database durability, production operations and independent security review remain open. None is inferred from the demonstration, public source visibility, an API key or a price quote. See [implementation status](IMPLEMENTATION_STATUS.md) and the [wallet](WALLET_SETUP.md), [Robinhood](ROBINHOOD_NATIVE_API.md) and [Solana](SOLANA_NATIVE_API.md) guides.

@@ -1,0 +1,177 @@
+{
+  "evidence": "live-price-quotes-only",
+  "environment": "solana-mainnet-reference",
+  "taker": null,
+  "submitted": false,
+  "notes": "No wallet, signature, execution, or user eligibility. Native gas and account creation costs are unmeasured.",
+  "records": [
+    {
+      "requestedAt": "2026-09-22T17:52:29.197Z",
+      "inputAtomic": "5000000",
+      "httpStatus": 200,
+      "response": {
+        "swapType": "aggregator",
+        "inAmount": "5000000",
+        "outAmount": "642572",
+        "otherAmountThreshold": "642572",
+        "swapMode": "ExactIn",
+        "slippageBps": 0,
+        "priceImpactPct": "-0.0003554747260205045",
+        "routePlan": [
+          {
+            "percent": 100,
+            "bps": 10000,
+            "usdValue": 4.999634593619529,
+            "swapInfo": {
+              "ammKey": "27x6aSxcAm6SoazoxmmTtFg6fWMQuNmdKJmHagq1DUZy",
+              "label": "Byreal",
+              "inputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+              "outputMint": "XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W",
+              "inAmount": "5000000",
+              "outAmount": "643215"
+            }
+          }
+        ],
+        "feeMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "feeBps": 10,
+        "platformFee": {
+          "feeBps": 10,
+          "feeMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+        },
+        "signatureFeeLamports": 0,
+        "signatureFeePayer": null,
+        "prioritizationFeeLamports": 0,
+        "prioritizationFeePayer": null,
+        "rentFeeLamports": 0,
+        "rentFeePayer": null,
+        "transaction": null,
+        "gasless": false,
+        "jitOptimized": false,
+        "taker": null,
+        "inputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "outputMint": "XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W",
+        "router": "metis",
+        "guaranteedPrice": false,
+        "requestId": "01a0ca3f-6bf5-751e-899e-911ef83642a1",
+        "inUsdValue": 4.999634593619529,
+        "outUsdValue": 4.9978573498821595,
+        "swapUsdValue": 4.999634593619529,
+        "priceImpact": -0.03554747260205045,
+        "mode": "ultra",
+        "totalTime": 82
+      }
+    },
+    {
+      "requestedAt": "2026-09-22T17:52:31.574Z",
+      "inputAtomic": "10000000",
+      "httpStatus": 200,
+      "response": {
+        "swapType": "aggregator",
+        "inAmount": "10000000",
+        "outAmount": "1285169",
+        "otherAmountThreshold": "1285169",
+        "swapMode": "ExactIn",
+        "slippageBps": 0,
+        "priceImpactPct": "-0.00033602856813326454",
+        "routePlan": [
+          {
+            "percent": 100,
+            "bps": 10000,
+            "usdValue": 9.999269187239058,
+            "swapInfo": {
+              "ammKey": "27x6aSxcAm6SoazoxmmTtFg6fWMQuNmdKJmHagq1DUZy",
+              "label": "Byreal",
+              "inputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+              "outputMint": "XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W",
+              "inAmount": "10000000",
+              "outAmount": "1286455"
+            }
+          }
+        ],
+        "feeMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "feeBps": 10,
+        "platformFee": {
+          "feeBps": 10,
+          "feeMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+        },
+        "signatureFeeLamports": 0,
+        "signatureFeePayer": null,
+        "prioritizationFeeLamports": 0,
+        "prioritizationFeePayer": null,
+        "rentFeeLamports": 0,
+        "rentFeePayer": null,
+        "transaction": null,
+        "gasless": false,
+        "jitOptimized": false,
+        "taker": null,
+        "inputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "outputMint": "XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W",
+        "router": "metis",
+        "guaranteedPrice": false,
+        "requestId": "01a0ca3f-7536-76fa-99b1-366e9f92ec54",
+        "inUsdValue": 9.999269187239058,
+        "outUsdValue": 9.995909147131691,
+        "swapUsdValue": 9.999269187239058,
+        "priceImpact": -0.033602856813326455,
+        "mode": "ultra",
+        "totalTime": 95
+      }
+    },
+    {
+      "requestedAt": "2026-09-22T17:52:33.878Z",
+      "inputAtomic": "25000000",
+      "httpStatus": 200,
+      "response": {
+        "swapType": "aggregator",
+        "inAmount": "25000000",
+        "outAmount": "3212912",
+        "otherAmountThreshold": "3212912",
+        "swapMode": "ExactIn",
+        "slippageBps": 0,
+        "priceImpactPct": "-0.00033929552265817166",
+        "routePlan": [
+          {
+            "percent": 100,
+            "bps": 10000,
+            "usdValue": 24.998172968097645,
+            "swapInfo": {
+              "ammKey": "27x6aSxcAm6SoazoxmmTtFg6fWMQuNmdKJmHagq1DUZy",
+              "label": "Byreal",
+              "inputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+              "outputMint": "XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W",
+              "inAmount": "25000000",
+              "outAmount": "3216128"
+            }
+          }
+        ],
+        "feeMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "feeBps": 10,
+        "platformFee": {
+          "feeBps": 10,
+          "feeMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+        },
+        "signatureFeeLamports": 0,
+        "signatureFeePayer": null,
+        "prioritizationFeeLamports": 0,
+        "prioritizationFeePayer": null,
+        "rentFeeLamports": 0,
+        "rentFeePayer": null,
+        "transaction": null,
+        "gasless": false,
+        "jitOptimized": false,
+        "taker": null,
+        "inputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "outputMint": "XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W",
+        "router": "metis",
+        "guaranteedPrice": false,
+        "requestId": "01a0ca3f-7e48-741a-ad94-59627aa3f7ab",
+        "inUsdValue": 24.998172968097645,
+        "outUsdValue": 24.989691199934935,
+        "swapUsdValue": 24.998172968097645,
+        "priceImpact": -0.03392955226581717,
+        "mode": "ultra",
+        "totalTime": 77
+      }
+    }
+  ]
+}

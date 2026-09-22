@@ -12,3 +12,9 @@ contracts/cache/
 contracts/broadcast/
 .testnet-secrets/
 test-results/
+.data/
+programs/target/
+target/
+contracts/evm/out/
+contracts/evm/cache/
+contracts/evm/broadcast/

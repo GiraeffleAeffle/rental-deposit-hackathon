@@ -485,9 +485,21 @@ async function nativeAuthorizationBoundary(browser) {
     body: { operationId: randomUUID(), walletId: 'fixture_browser', intent: { kind: 'fund' } },
     statuses: [401, 403],
   });
-  const solana = await browser.request('/api/finance/solana', { statuses: [401, 403, 404] });
+  await browser.request('/api/finance/solana', { statuses: [401, 403] });
+  await browser.request('/api/finance/solana/operations', {
+    method: 'POST',
+    body: { requestId: randomUUID(), action: { kind: 'fund' } },
+    statuses: [401, 403],
+  });
+  for (const network of ['robinhood', 'solana']) {
+    await browser.request(`/api/finance/${network}/operations/${randomUUID()}/retry`, {
+      method: 'POST',
+      body: {},
+      statuses: [401, 403],
+    });
+  }
   console.log(
-    `PASS native boundary: demo cookies grant no Robinhood native access; Solana native route ${solana.status === 404 ? 'is absent' : 'requires verified authorization'}. No native signing or sending attempted.`,
+    'PASS native boundary: demo cookies cannot read, plan or retry native finance on either network. No native signing or sending attempted.',
   );
 }
 
