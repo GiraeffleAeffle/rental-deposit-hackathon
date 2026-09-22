@@ -23,6 +23,7 @@ The in-app browser's viewport overrides do not match requested CSS sizes exactly
 
 - Node 25.2.1 was used locally; Node 24 LTS is the documented and CI target. Local `node:sqlite` emits an experimental-feature warning. Hosted operation uses PostgreSQL rather than ephemeral local storage.
 - TypeScript is pinned to 5.9.3 for the Solana Kit/Privy dependency combination, and ESLint to 9.39.5 for the Next plugin. Dependencies are recorded in the lockfile.
+- The lockfile was repaired using npm 11.19.0 (the Node 24 CI runner version) to include optional Emnapi runtime dependencies that the older local npm omitted. Linux clean-install validation remains part of CI.
 - The final npm advisory check reports **23 moderate, zero high and zero critical findings** in the transitive dependency tree. A compatible `ws` patch override removed the previously reported high finding. The remaining advisories, including provider-wallet dependencies, require review before production. Do not apply an unreviewed major-version audit fix merely to clear the count.
 - The build warns that Privy's optional `@farcaster/mini-app-solana` module is absent. This app does not enable Farcaster mini-app login; ordinary account hooks compile. A real configured-wallet rehearsal is still required, and the warning is not concealed as a passing provider test.
 
