@@ -194,6 +194,8 @@ function AccountConnections() {
               detail={
                 status?.identity
                   ? 'Credentials are configured; real-device acceptance still needs verification.'
+                  : wallet.configured
+                    ? 'Browser access is configured. Add the server secret to verify accounts for connected finance.'
                   : 'Create a Privy app, add the application origin and configure its credentials.'
               }
             />
@@ -233,7 +235,7 @@ function AccountConnections() {
             <StatusItem
               ready={false}
               title="Personal investment orders"
-              detail="Jupiter and 0x adapters validate routes and keep raw holdings distinct from accumulated exposure. Real buy/sell fills need provider access and eligibility."
+              detail="Jupiter and 0x adapters validate routes and keep raw holdings distinct from accumulated exposure. Real orders need provider access and a verified eligible non-US profile."
             />
           </ul>
           <Badge tone="neutral">A local proof is not a production deployment</Badge>
