@@ -40,6 +40,16 @@ PRIVY_VERIFICATION_KEY=
 
 The SDK currently uses public Robinhood and Solana RPCs for wallet connection/signing. Server finance adapters own their separate configured RPCs, transaction simulation, sponsor policy and submission. Do not place a private paid RPC key in these public wallet defaults.
 
+## Trading provider handoff
+
+No Jupiter or 0x credentials were created or retrieved. Browser control was unavailable during the follow-up account check, so existing signed-in sessions could not be inspected. The links and steps below were verified from the providers' public pages and documentation on 22 September 2026.
+
+Jupiter's current account entry point is [Developer Portal](https://developers.jup.ag/portal); the old `portal.jup.ag` address redirects to the platform home page. The public portal offers Google, GitHub or email sign-in. After personal sign-in and review of the provider's terms, create or select the project's team, generate a key and use the Free plan. The current Free plan is $0 with one request per second. Store its value as server-only `JUPITER_API_KEY`; scope the key to the products this application uses. Jupiter also documents keyless requests at 0.5 requests per second, which can support a limited quote check before account setup. Account setup does not establish instrument eligibility or prove an order filled. [Jupiter setup](https://developers.jup.ag/docs/portal/setup), [pricing](https://developers.jup.ag/pricing).
+
+For 0x, open [Log in](https://dashboard.0x.org/login) or [Create an account](https://dashboard.0x.org/create-account). The public signup form asks for first name, last name and work email. Complete personal account verification, then create a project team and app with the required API products. The app's API Keys view provides the key; keep it in server-only `ZEROX_API_KEY`. Do not add a paid plan or use a key belonging to a different project. [0x account and app setup](https://docs.0x.org/docs/introduction/quickstart/getting-started).
+
+Robinhood stock-token access requires an additional 0x RWA opt-in. The provider's article, updated 21 September, says requests are currently processed for legal entities and individual requests are paused. It directs eligible teams to request access through `support@0xproject.com`; no outreach or business assertions were submitted for this project. `ZEROX_RWA_ENABLED=1` must represent an actual provider grant, not a local workaround. A standard API key alone does not remove this access gate. [Current 0x RWA access requirements](https://help.0x.org/articles/5420296643-xstocks-support-on-0x).
+
 ## Parent application integration
 
 Wrap the interactive application with `WalletProvider`; show `WalletAccessPanel` in account onboarding. Use `useRentalWallet().getAccessToken()` for the Authorization bearer token on protected same-origin API requests. The backend calls `verifyPrivyToken(token)` and looks up the subject's role membership in the database. No cookie, URL parameter or demo role selector substitutes for that check.
