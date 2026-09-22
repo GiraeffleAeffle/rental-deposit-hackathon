@@ -1,6 +1,6 @@
 # Passkeys and personal wallet setup
 
-Updated 22 September 2026. The SDK integration is implemented; provider activation, real passkeys, same-wallet recovery and sponsored transactions have not yet been proved with a configured account.
+Updated 22 September 2026. The SDK integration and development-dashboard configuration exist; a server secret in this checkout, real passkeys, same-wallet recovery and sponsored transactions have not yet been proved.
 
 ## What is implemented
 
@@ -21,15 +21,15 @@ The module never calls server wallet-signing endpoints, attaches session signers
 
 ## Provider activation
 
-The Privy dashboard was inspected in a dedicated background browser tab. It was signed out and offered an email sign-in/sign-up form. No personal information, credentials or account terms were submitted, and no provider account or app was created. A developer must finish their own sign-in before an app can be configured.
+The user signed in and created the `hackathon` development app. Email and passkey login are enabled. `http://127.0.0.1:4175` is its allowed local origin. The wallet environment reports TEE enabled; smart wallets and additional authorization keys remain off. The public app ID is set in this checkout's ignored `.env.local`. A server secret exists in the dashboard, but Privy does not show its full value again and this checkout has no `PRIVY_APP_SECRET`. An existing saved secret or a separately authorized new secret is needed before server identity verification can work. No live passkey signup or original-wallet recovery has been rehearsed.
 
-After sign-in:
+Remaining setup:
 
-1. Create a development app for the existing project; keep the current technical repository name while the brand is undecided. Confirm the available free development plan without adding a paid subscription.
-2. Enable passkey and email authentication. Configure the exact local and preview origins. Use `http://localhost:<port>` for local passkey testing and HTTPS for a published origin; settle the relying-party/domain configuration before enrolling funded users. Do not assume a passkey enrolled for one origin works on every preview hostname.
-3. Enable user-owned embedded Ethereum and Solana wallets using the current TEE wallet model. Keep server/session/additional signers and wallet automations off. The application code requests each missing wallet after passkey and backup-email setup.
-4. Obtain the app ID, server app secret and optional JWT verification public key. Keep the secret in local `.env.local` or the deployment environment. Never put it in a `NEXT_PUBLIC_` variable, public repository, URL or screenshot.
-5. Configure the same app ID on the client and server. Restart local development or rebuild a deployment after changing the public app ID. The client ID is public; the app secret is private.
+1. Use the existing development app and preserve the technical repository name while the brand is undecided. A production plan has not been activated.
+2. Add the exact stable HTTPS preview origin before testing passkeys there. Confirm relying-party/domain behavior on a real device; a credential enrolled at the local origin may not work on a different hostname.
+3. Keep user-owned embedded Ethereum and Solana wallets with TEE, without server/session/additional signers or wallet automations. The application explicitly requests each missing wallet after passkey and backup-email setup.
+4. Supply an existing saved app secret to `PRIVY_APP_SECRET` in ignored local or deployment configuration. If it was not saved, handle replacement explicitly; do not treat the masked dashboard entry as a usable secret. Never put a server secret in a `NEXT_PUBLIC_` variable, public repository, URL or screenshot.
+5. Restart local development or rebuild a deployment after configuration changes. Prove real passkey access and original-wallet recovery before connected finance.
 
 ```dotenv
 NEXT_PUBLIC_PRIVY_APP_ID=
@@ -42,9 +42,9 @@ The SDK currently uses public Robinhood and Solana RPCs for wallet connection/si
 
 ## Trading provider handoff
 
-No Jupiter or 0x credentials were created or retrieved. Browser control was unavailable during the follow-up account check, so existing signed-in sessions could not be inspected. The links and steps below were verified from the providers' public pages and documentation on 22 September 2026.
+The user signed in to Jupiter and created an organization. A project team named `rental-deposit-dev` and one API key restricted to `/swap/v2/order` exist. Its full one-time value was not retained in this checkout, so `JUPITER_API_KEY` remains unset; arrange a saved key or a replacement before transaction builds. No 0x account or RWA grant is configured. The provider links and access conditions below were checked on 22 September 2026.
 
-Jupiter's current account entry point is [Developer Portal](https://developers.jup.ag/portal); the old `portal.jup.ag` address redirects to the platform home page. The public portal offers Google, GitHub or email sign-in. After personal sign-in and review of the provider's terms, create or select the project's team, generate a key and use the Free plan. The current Free plan is $0 with one request per second. Store its value as server-only `JUPITER_API_KEY`; scope the key to the products this application uses. Jupiter also documents keyless requests at 0.5 requests per second, which can support a limited quote check before account setup. Account setup does not establish instrument eligibility or prove an order filled. [Jupiter setup](https://developers.jup.ag/docs/portal/setup), [pricing](https://developers.jup.ag/pricing).
+Jupiter's current account entry point is [Developer Portal](https://developers.jup.ag/portal). The current Free plan is $0 with one request per second. Keep any usable key as server-only `JUPITER_API_KEY`; the current app uses `/swap/v2/order`. Jupiter also documents keyless requests at 0.5 requests per second, which support the existing limited price check. An account and indicative quote do not establish instrument eligibility or prove an order filled. [Jupiter setup](https://developers.jup.ag/docs/portal/setup), [pricing](https://developers.jup.ag/pricing).
 
 For 0x, open [Log in](https://dashboard.0x.org/login) or [Create an account](https://dashboard.0x.org/create-account). The public signup form asks for first name, last name and work email. Complete personal account verification, then create a project team and app with the required API products. The app's API Keys view provides the key; keep it in server-only `ZEROX_API_KEY`. Do not add a paid plan or use a key belonging to a different project. [0x account and app setup](https://docs.0x.org/docs/introduction/quickstart/getting-started).
 

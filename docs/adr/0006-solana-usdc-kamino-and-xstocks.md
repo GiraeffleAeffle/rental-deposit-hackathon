@@ -15,6 +15,7 @@ Tenant-wallet lending would simplify integration but would not enforce the tenan
 - Implement and verify the Rust program and CPI account/authority checks; Solidity code and an EVM fork are not substitutes. The escrow must own its lending receipts and redeem into its own authorized token account.
 - Keep native token units, lending receipts and scaled investment exposure distinct. Validate the selected xStock's Token-2022 controls and corporate-action accounting; accumulating exposure does not create a second cash payment.
 - The wallet and sponsor model follows proposed ADR 0004. Jupiter orders must remain compatible with its actual signatures and fee payer; the escrow receives no general swap instruction or portfolio authority.
+- The first xStock proof excludes US users and still requires a verified, current issuer-eligible profile. An indicative quote and a non-US wallet address do not establish that eligibility. Keep live execution unavailable until the actual route and user are approved.
 - Match the test environment to the actual reserve, token and route. Devnet program presence and a mainnet indicative quote do not establish an executable devnet lifecycle.
 
 Accept this proposal after the escrow/CPI, receipt redemption, wallet recovery/sponsorship, investment signing and exit proofs. Keep current reserve/mint addresses, SDK choices, token extensions, quote observations and environment limitations in the [Solana implementation report](../SOLANA_STACK_EXPLORATION_2026-09-22.md).
