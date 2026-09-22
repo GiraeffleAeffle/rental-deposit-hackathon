@@ -143,10 +143,16 @@ async function fixture() {
     broadcasts: [] as string[],
     ambiguous: false,
     receiptFinal: false,
+    receiptReason: 'signature-not-observed-do-not-resubmit-new-intent',
+    blockHeight: '100',
+    lifetimeUnavailable: false,
   };
   const gateway: SolanaGateway = {
     snapshot: async () => structuredClone(snapshot),
-    lifetime: async () => ({ blockhash: key(30), lastValidBlockHeight: '150', blockHeight: '100' }),
+    lifetime: async () => {
+      if (state.lifetimeUnavailable) throw new Error('RPC height unavailable');
+      return { blockhash: key(30), lastValidBlockHeight: '150', blockHeight: state.blockHeight };
+    },
     simulate: async () => {
       state.simulations++;
       return {
@@ -158,7 +164,7 @@ async function fixture() {
     broadcast: async (bytes) => {
       const records = await store.scan<{ operations: SolanaOperation[] }>('solana-lane:');
       const saved = records[0].value.operations[0];
-      assert.equal(saved.state, 'signed');
+      assert.ok(['signed', 'unknown', 'broadcast'].includes(saved.state));
       assert.equal(saved.signedTxBase64, Buffer.from(bytes).toString('base64'));
       assert.ok(saved.signature);
       state.broadcasts.push(Buffer.from(bytes).toString('base64'));
@@ -168,7 +174,7 @@ async function fixture() {
     reconcile: async (signature) =>
       state.receiptFinal
         ? { status: 'finalized', signature, slot: '51', deltas: [] }
-        : { status: 'unknown', reason: 'RPC cannot yet determine the result' },
+        : { status: 'unknown', reason: state.receiptReason },
   };
   const feeSponsor = {
     address: sponsor.address,
@@ -289,12 +295,145 @@ test('ambiguous broadcast retries exactly the persisted signed bytes without a n
     assert.ok(saved.signature);
     assert.equal((await f.service.authorize(f.identity, op.id, signed)).state, 'unknown');
     assert.equal(f.state.sponsorCalls, 1);
+    assert.equal(f.state.broadcasts.length, 2);
     assert.equal(new Set(f.state.broadcasts).size, 1);
     f.state.receiptFinal = true;
     f.snapshot.slot = '51';
     f.snapshot.tenancy.nextNonce = '1';
     assert.equal((await f.service.reconcile(f.identity, op.id)).state, 'finalized');
     assert.equal((await f.service.authorize(f.identity, op.id, signed)).state, 'finalized');
+    assert.equal(f.state.sponsorCalls, 1);
+  } finally {
+    await f.store.close();
+  }
+});
+test('authenticated retry after a reload sends only persisted bytes without another signature', async () => {
+  const f = await fixture();
+  try {
+    const op = await f.service.prepare(f.identity, 'request_0001', { kind: 'fund' });
+    await assert.rejects(f.service.retry(f.identity, op.id), /already signed/);
+    assert.equal(f.state.sponsorCalls, 0);
+    f.state.ambiguous = true;
+    const signed = await f.service.authorize(f.identity, op.id, await f.sign(op));
+    assert.equal(signed.state, 'unknown');
+    f.state.ambiguous = false;
+    const reloaded = createSolanaService(f.dependencies);
+    const result = await reloaded.retry(f.identity, op.id);
+    assert.equal(result.state, 'broadcast');
+    assert.equal(result.signature, signed.signature);
+    assert.equal(f.state.broadcasts.length, 2);
+    assert.equal(f.state.broadcasts[0], f.state.broadcasts[1]);
+    assert.equal(f.state.sponsorCalls, 1);
+    assert.equal(f.state.simulations, 2);
+  } finally {
+    await f.store.close();
+  }
+});
+test('retry rechecks the original actor, current recovery, accepted agreement and deployment', async () => {
+  const f = await fixture();
+  try {
+    const op = await f.service.prepare(f.identity, 'request_0001', { kind: 'fund' });
+    f.state.ambiguous = true;
+    await f.service.authorize(f.identity, op.id, await f.sign(op));
+    const landlord = f.agreement.parties.landlord!;
+    const other = { ...f.identity, subject: landlord.subject, wallets: [landlord.wallet] };
+    await assert.rejects(f.service.retry(other, op.id), /recorded actor/);
+    f.state.recoveryAllowed = false;
+    await assert.rejects(f.service.retry(f.identity, op.id), /recovery/);
+    f.state.recoveryAllowed = true;
+    await f.store.update<Agreement>(`agreement:${f.agreement.id}`, (row) => ({
+      ...row,
+      accepted: {},
+    }));
+    await assert.rejects(f.service.retry(f.identity, op.id), /must accept/);
+    await f.store.update<Agreement>(`agreement:${f.agreement.id}`, () => f.agreement);
+    f.snapshot.tenancy.policyHash = new Uint8Array(32);
+    await assert.rejects(f.service.retry(f.identity, op.id), /accepted parties and policy/);
+    f.gateway.snapshot = async () => {
+      throw new Error('Deployment code hash changed');
+    };
+    await assert.rejects(f.service.retry(f.identity, op.id), /code hash changed/);
+    assert.equal(f.state.broadcasts.length, 1);
+    assert.equal(f.state.sponsorCalls, 1);
+  } finally {
+    await f.store.close();
+  }
+});
+test('expired retry reviews, expired blockhashes and unknown heights never free the nonce or resend', async () => {
+  const f = await fixture();
+  try {
+    const op = await f.service.prepare(f.identity, 'request_0001', { kind: 'fund' });
+    f.state.ambiguous = true;
+    await f.service.authorize(f.identity, op.id, await f.sign(op));
+    f.state.now += 60_000;
+    let result = await f.service.retry(f.identity, op.id);
+    assert.equal(result.state, 'unknown');
+    assert.match(result.lastError!, /review expired/);
+    f.state.now = 100000;
+    f.state.blockHeight = '151';
+    result = await f.service.retry(f.identity, op.id);
+    assert.equal(result.state, 'unknown');
+    assert.match(result.lastError!, /blockhash lifetime ended/);
+    f.state.blockHeight = '100';
+    f.state.lifetimeUnavailable = true;
+    result = await f.service.retry(f.identity, op.id);
+    assert.equal(result.state, 'unknown');
+    assert.match(result.lastError!, /Block-height evidence is unavailable/);
+    f.state.lifetimeUnavailable = false;
+    await assert.rejects(
+      f.service.prepare(f.identity, 'request_0002', { kind: 'fund' }),
+      /reserves/,
+    );
+    assert.equal(f.state.broadcasts.length, 1);
+    assert.equal(f.state.sponsorCalls, 1);
+  } finally {
+    await f.store.close();
+  }
+});
+test('retry preserves unknown when receipt evidence is incomplete or the tenancy nonce changed', async () => {
+  const f = await fixture();
+  try {
+    const op = await f.service.prepare(f.identity, 'request_0001', { kind: 'fund' });
+    f.state.ambiguous = true;
+    await f.service.authorize(f.identity, op.id, await f.sign(op));
+    for (const reason of [
+      'rpc-evidence-unavailable',
+      'receipt-unavailable',
+      'awaiting-finalized-tenancy-state',
+    ]) {
+      f.state.receiptReason = reason;
+      const result = await f.service.retry(f.identity, op.id);
+      assert.equal(result.state, 'unknown');
+      assert.equal(result.lastError, reason);
+    }
+    f.state.receiptReason = 'signature-not-observed-do-not-resubmit-new-intent';
+    f.snapshot.tenancy.nextNonce = '1';
+    assert.match((await f.service.retry(f.identity, op.id)).lastError!, /nonce changed/);
+    f.gateway.reconcile = async () => {
+      throw new Error('RPC disconnected');
+    };
+    assert.match(
+      (await f.service.retry(f.identity, op.id)).lastError!,
+      /Receipt evidence is unavailable/,
+    );
+    assert.equal(f.state.broadcasts.length, 1);
+    assert.equal(f.state.sponsorCalls, 1);
+  } finally {
+    await f.store.close();
+  }
+});
+test('retry returns a finalized recorded receipt without another broadcast', async () => {
+  const f = await fixture();
+  try {
+    const op = await f.service.prepare(f.identity, 'request_0001', { kind: 'fund' });
+    f.state.ambiguous = true;
+    await f.service.authorize(f.identity, op.id, await f.sign(op));
+    f.state.receiptFinal = true;
+    f.snapshot.slot = '51';
+    f.snapshot.tenancy.nextNonce = '1';
+    assert.equal((await f.service.retry(f.identity, op.id)).state, 'finalized');
+    assert.equal((await f.service.retry(f.identity, op.id)).state, 'finalized');
+    assert.equal(f.state.broadcasts.length, 1);
     assert.equal(f.state.sponsorCalls, 1);
   } finally {
     await f.store.close();

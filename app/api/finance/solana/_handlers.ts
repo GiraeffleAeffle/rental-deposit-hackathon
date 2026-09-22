@@ -35,7 +35,7 @@ export async function solanaGet(request: Request, id?: string) {
 }
 export async function solanaPost(
   request: Request,
-  action: 'prepare' | 'authorize' | 'reconcile',
+  action: 'prepare' | 'authorize' | 'reconcile' | 'retry',
   id?: string,
 ) {
   try {
@@ -76,6 +76,7 @@ export async function solanaPost(
         throw new SolanaServiceError(400, 'signature_required', 'Return the signed transaction.');
       return response({ operation: await service.authorize(identity, id, body.signedTxBase64) });
     }
+    if (action === 'retry') return response({ operation: await service.retry(identity, id) });
     return response({ operation: await service.reconcile(identity, id) });
   } catch (error) {
     return failure(error);

@@ -407,6 +407,61 @@ export function createSolanaService(dependencies: Dependencies) {
       );
     }
   }
+  const retainUnknown = (id: string, reason: string) =>
+    update(id, (current) =>
+      ['finalized', 'failed'].includes(current.state)
+        ? current
+        : { ...current, state: 'unknown', lastError: reason },
+    );
+  async function retryStored(id: string, snapshot: SolanaSnapshot) {
+    let op = await operation(id);
+    if (!op.signedTxBase64 || !op.signature || op.state === 'expired')
+      fail('operation_not_signed', 'Only an already signed operation can be retried.');
+    if (op.state === 'finalized' || op.state === 'failed') return op;
+    try {
+      op = await reconcileStored(id);
+    } catch {
+      return retainUnknown(
+        id,
+        'Receipt evidence is unavailable. The original nonce remains reserved.',
+      );
+    }
+    if (op.state === 'finalized' || op.state === 'failed') return op;
+    // Rebroadcast only after a successful RPC lookup reports this signature absent.
+    // Missing receipt details or transport errors do not establish absence.
+    const receipt = op.receipt as { status?: unknown; reason?: unknown } | null;
+    if (
+      receipt?.status !== 'unknown' ||
+      receipt.reason !== 'signature-not-observed-do-not-resubmit-new-intent'
+    )
+      return op;
+    const expiresAt = Date.parse(op.expiresAt);
+    let height: bigint;
+    try {
+      height = atomic((await gateway.lifetime()).blockHeight);
+    } catch {
+      return retainUnknown(
+        id,
+        'Block-height evidence is unavailable. The original nonce remains reserved.',
+      );
+    }
+    if (!Number.isFinite(expiresAt) || expiresAt <= now())
+      return retainUnknown(
+        id,
+        'The authorization review expired. Reconcile the original signature; its nonce remains reserved.',
+      );
+    if (height >= atomic(op.lastValidBlockHeight))
+      return retainUnknown(
+        id,
+        'The original blockhash lifetime ended. Reconcile the original signature; its nonce remains reserved.',
+      );
+    if (op.nonce !== snapshot.tenancy.nextNonce)
+      return retainUnknown(
+        id,
+        'The tenancy nonce changed without a complete receipt. Reconcile the original signature.',
+      );
+    return sendStored(op);
+  }
   return {
     async snapshot(identity: VerifiedIdentity) {
       const verified = await access(identity);
@@ -588,9 +643,7 @@ export function createSolanaService(dependencies: Dependencies) {
           400,
         );
       if (op.signedTxBase64) {
-        op = await reconcileStored(id);
-        if (op.state === 'finalized' || op.state === 'failed') return publicOperation(op);
-        return publicOperation(await sendStored(op));
+        return publicOperation(await retryStored(id, verified.snapshot));
       }
       if (tx.signatures[address(sponsor.address)])
         fail(
@@ -647,6 +700,17 @@ export function createSolanaService(dependencies: Dependencies) {
         };
       });
       return publicOperation(await sendStored(op));
+    },
+    async retry(identity: VerifiedIdentity, id: string) {
+      const verified = await access(identity);
+      const op = await operation(id);
+      if (
+        op.subject !== identity.subject ||
+        op.walletId !== verified.wallet.id ||
+        op.actor !== verified.wallet.address
+      )
+        fail('operation_owner', 'Only the recorded actor can retry this operation.', 403);
+      return publicOperation(await retryStored(id, verified.snapshot));
     },
     async reconcile(identity: VerifiedIdentity, id: string) {
       await access(identity);
