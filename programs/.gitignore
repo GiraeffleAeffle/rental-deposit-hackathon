@@ -1,0 +1,3 @@
+# Program artifacts and private local signer material must not be committed.
+*.so
+*-keypair.json
