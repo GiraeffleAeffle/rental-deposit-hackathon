@@ -64,7 +64,7 @@ export function parseJupiterQuote(payload: unknown, request: QuoteRequest): Jupi
 export async function quoteInvestment(request: QuoteRequest, fetcher: typeof fetch = fetch): Promise<Availability<JupiterQuote>> {
   atomic(request.inputAtomic, false);
   if (request.genesisHash !== SOLANA_MAINNET_MANIFEST.genesisHash) return { available: false, reason: "issuer-route-has-no-verified-test-cluster" };
-  if (!request.apiKey) return { available: false, reason: "jupiter-api-key-not-configured" };
+  if (request.build && !request.apiKey) return { available: false, reason: "jupiter-build-api-key-not-configured" };
   if (!Number.isSafeInteger(request.nowMs)) throw new Error("Invalid quote timestamp");
   const pair = investmentPair(request.direction);
   const params = new URLSearchParams({ ...pair, amount: request.inputAtomic });
@@ -73,7 +73,7 @@ export async function quoteInvestment(request: QuoteRequest, fetcher: typeof fet
     params.set("taker", address(request.taker)); params.set("payer", address(request.payer)); params.set("receiver", address(request.taker));
   }
   try {
-    const response = await fetcher(`https://api.jup.ag/swap/v2/order?${params}`, { headers: { "x-api-key": request.apiKey }, signal: AbortSignal.timeout(10_000) });
+    const response = await fetcher(`https://api.jup.ag/swap/v2/order?${params}`, { headers: request.apiKey ? { "x-api-key": request.apiKey } : undefined, signal: AbortSignal.timeout(10_000) });
     if (!response.ok) return { available: false, reason: `jupiter-http-${response.status}` };
     return { available: true, value: parseJupiterQuote(await response.json(), request) };
   } catch { return { available: false, reason: "jupiter-response-unavailable-or-invalid" }; }

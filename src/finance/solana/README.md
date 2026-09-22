@@ -10,12 +10,14 @@
 | `decodeKaminoReserve` / `validateKaminoAccounts` | Pass a coherent, fresh account observation. Vault and receipt mint come from validated reserve state; only the market authority universally follows the current PDA derivation. Refresh again on chain before a value-sensitive action. |
 | `buildInitializeEscrow` | Tenant and landlord agree/sign once. A separate sponsor pays rent. Lease ID and agreed policy hash are 32-byte values. |
 | `buildEscrowInstruction` | Persist an operation intent, expected nonce and exact compiled message before user authorization. Action kinds match the Anchor instruction names. |
-| `quoteInvestment` | Read/build only. Requires configured Jupiter key, mainnet reference genesis and optional taker/separate payer. Test issuer routes return unavailable. No secret or signing behavior lives here. |
+| `quoteInvestment` | Read/build only. Price-only requests allow the documented keyless tier (caller rate limit: 0.5 RPS). Builds require a configured key, mainnet reference genesis and taker/separate payer. Test issuer routes return unavailable. No secret or signing behavior lives here. |
 | `validateQuoteForAuthorization` | Verify eligibility, fee bound, amount, expiry and recipient; then inspect the actual bytes. A price-only/failed build is never signable. |
 | `inspectInvestmentTransaction` | Resolve every lookup table; obtain before/after simulation data for every writable account. It validates required signers, fee payer, the narrow supported venue ABI, encoded economic limits, recipient, tenant asset loss/authority changes, sponsor budget and exact-message simulation hash. |
 | `observeSolanaSignature` / `reconcileSolanaSignature` | Verify finality and raw mint/owner/account deltas against the persisted message authorization. Unknown/missing evidence does not mean zero balance or authorize creating a replacement intent. |
 
 Build instructions with `@solana/kit` 5.x; the root application owns message compilation, blockhash lifetime, Privy signing, Kora/server sponsorship, persistence and broadcast. These helpers do not perform swaps, provide a faucet, manufacture market returns, or sign transactions. `investmentExecutionAvailability()` explicitly reports that real issuer execution remains unavailable in this test prototype.
+
+The restricted test-escrow server integration is implemented in `src/server/solana-service.ts` and `src/server/solana-rpc.ts`. Its [operator setup and HTTP contract](../../../app/api/finance/solana/README.md) explain the required verified deployment, accepted agreement, original-wallet recovery, sponsorship, persistence and unavailable-state gates. The service has no mainnet execution or initialization endpoint.
 
 For program actions, match the persisted intent and on-chain nonce as well as token receipts. Claim approval has no token delta and needs the tenancy state transition; it is not a payment. Supply amounts are caps because KLend rounds to whole receipt units; use observed cash/receipt changes rather than assuming the requested amount was fully spent. Never infer settled earnings from an unexplained cash donation.
 

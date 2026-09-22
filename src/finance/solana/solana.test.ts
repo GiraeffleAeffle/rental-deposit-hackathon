@@ -91,14 +91,15 @@ test("tenancy binary decoder mirrors the 483-byte Anchor account ABI", async () 
   data[offset++] = 1;data[offset] = t.bump;
   assert.deepEqual(decodeTenancy({ address: t.address, owner: program, executable: false, data }, manifest), t);
 });
-test("Jupiter key absence and test clusters return unavailable without making requests", async () => {
+test("Jupiter permits keyless price checks while builds and test issuer routes stay gated", async () => {
   let calls = 0;
   const fetcher = (async () => { calls++;return new Response(JSON.stringify(response)); }) as typeof fetch;
-  assert.equal((await quoteInvestment(request, fetcher)).available, false);
+  assert.equal((await quoteInvestment(request, fetcher)).available, true);
+  assert.equal((await quoteInvestment({ ...request, build: true, taker: tenant, payer: sponsor }, fetcher)).available, false);
   assert.equal((await quoteInvestment({ ...request, apiKey: "fixture", genesisHash: manifest.genesisHash }, fetcher)).available, false);
-  assert.equal(calls, 0);
+  assert.equal(calls, 1);
   const quote = await quoteInvestment({ ...request, apiKey: "fixture" }, fetcher);
-  assert.equal(quote.available, true);assert.equal(calls, 1);
+  assert.equal(quote.available, true);assert.equal(calls, 2);
   if (quote.available) assert.equal(quote.value.transaction, null);
 });
 test("economic authorization rejects price-only, expiry, fee and recipient changes", () => {
