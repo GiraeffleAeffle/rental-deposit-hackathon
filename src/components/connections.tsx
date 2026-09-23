@@ -173,6 +173,7 @@ function AccountConnections() {
           )}
         </section>
       )}
+      {wallet.authenticated && <ConnectedAgreements request={authorized} />}
       <div className="connection-grid">
         <section className="card">
           <span className="eyebrow">SHARED APPLICATION</span>
@@ -197,7 +198,7 @@ function AccountConnections() {
                   ? 'Credentials are configured. Verify login and wallet recovery on each deployment origin before funding.'
                   : wallet.configured
                     ? 'Browser access is configured. Add the server secret to verify accounts for connected finance.'
-                  : 'Create a Privy app, add the application origin and configure its credentials.'
+                    : 'Create a Privy app, add the application origin and configure its credentials.'
               }
             />
             <StatusItem
@@ -317,7 +318,6 @@ function AccountConnections() {
       <MarketPrices />
       {wallet.authenticated && (
         <>
-          <ConnectedAgreements request={authorized} />
           <NativeRobinhood request={authorized} />
           <SolanaInitializationPanel request={authorized} />
           <NativeSolana request={authorized} />
