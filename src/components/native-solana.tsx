@@ -125,7 +125,7 @@ export function NativeSolana({
     await refresh();
   }
   return (
-    <section className="card operation-section">
+    <section className="card operation-section" id="connected-solana-escrow">
       <div className="section-heading">
         <h2>Connected Solana escrow</h2>
         <Badge tone="neutral">Test deployment</Badge>

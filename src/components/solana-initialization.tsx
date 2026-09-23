@@ -200,8 +200,9 @@ export function SolanaInitializationPanel({
           {message && <p className="note" role="status">{message}</p>}
           {initialization?.state === 'finalized' && (
             <p className="note">
-              The initialized tenancy matches the accepted agreement. Read the connected escrow below
-              to inspect it, then the tenant can fund the fixed security amount.
+              The initialized tenancy matches the accepted agreement.{' '}
+              <a href="#connected-solana-escrow">Open the connected escrow</a> to inspect its current
+              funding and lending state.
             </p>
           )}
         </>

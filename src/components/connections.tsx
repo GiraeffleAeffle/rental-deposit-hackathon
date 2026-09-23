@@ -242,7 +242,7 @@ function AccountConnections() {
               title="Solana: escrow and Kamino integration"
               detail={
                 status?.solana.deployment
-                  ? 'The local SVM proof passes, and a pinned devnet escrow is configured for this app. An accepted tenancy still needs both setup signatures before funding.'
+                  ? 'The local SVM proof passes, and a pinned devnet escrow is configured. Read the connected escrow below for this tenancy’s current state and finalized receipts.'
                   : 'The compiled escrow and actual KLend program pass local SVM funding, lending, release and settlement checks. A deployed test escrow remains to be configured.'
               }
             />
