@@ -193,7 +193,7 @@ function AccountConnections() {
               title="Privy passkey provider"
               detail={
                 status?.identity
-                  ? 'Credentials are configured; real-device acceptance still needs verification.'
+                  ? 'Credentials are configured. Verify login and wallet recovery on each deployment origin before funding.'
                   : wallet.configured
                     ? 'Browser access is configured. Add the server secret to verify accounts for connected finance.'
                   : 'Create a Privy app, add the application origin and configure its credentials.'
