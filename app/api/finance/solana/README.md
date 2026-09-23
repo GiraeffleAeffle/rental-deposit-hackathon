@@ -14,7 +14,9 @@ Set these **server-only** variables; none may use a `NEXT_PUBLIC_` prefix:
 | `SOLANA_DEPLOYMENT_MANIFEST` | JSON matching the schema below, recorded from the actual deployment and reserve accounts.                                                                                  |
 | `SOLANA_SPONSOR_KEYPAIR`     | A dedicated test sponsor's 64-byte Solana keypair as a JSON integer array, held in local environment storage or a secret manager. It must differ from every tenancy party. |
 
-The following is a **schema example, not usable deployment configuration**. Replace each placeholder with independently verified test-chain evidence. There is no checked-in devnet reserve or initialized tenancy to substitute automatically.
+The following is a **schema example, not usable deployment configuration**. Replace each placeholder with independently verified test-chain evidence. A read-only probe has found test-USDC reserve candidates, but none is selected or proved executable with this escrow. There is no initialized tenancy to substitute automatically.
+
+Run `node --experimental-strip-types scripts/probe-solana-devnet.mjs` from the repository root to repeat the public devnet account probe. It checks the pinned genesis, test mint, KLend executable, reserve/market/vault identities, receipt mint and configured oracle-account presence without creating accounts or sending transactions. The [23 September snapshot](../../../../docs/evidence/SOLANA_DEVNET_RESERVES_2026-09-23.json) contains 21 matches, 17 passing account-state checks. [Third-party finalized receipts](../../../../docs/evidence/SOLANA_DEVNET_RECEIPTS_2026-09-23.json) show a successful batch refresh and receipt redemption involving one recent candidate. They do not exercise this escrow's exact refresh/supply/redemption sequence. Recheck live state before choosing a candidate; keep app writes disabled until its own small test transaction and deployment manifest have been reviewed.
 
 ```json
 {
