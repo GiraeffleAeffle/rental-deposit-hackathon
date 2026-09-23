@@ -13,5 +13,6 @@ Start with [implementation status](IMPLEMENTATION_STATUS.md) for what exists and
 | [Wallet setup](WALLET_SETUP.md)                                     | Privy activation, recovery and developer-account handoff              |
 | [Robinhood native API](ROBINHOOD_NATIVE_API.md)                     | Verified deployment configuration, authorization and receipt recovery |
 | [Solana native API](SOLANA_NATIVE_API.md)                           | Test manifest, fee payer, signing and receipt recovery                |
+| [Solana devnet rehearsal](SOLANA_DEVNET_REHEARSAL.md)               | Test funding, reviewed artifact, deployment and account handoff        |
 
 The dated reports retain research observations and desired acceptance gates. The implementation status owns current completion claims. The older `IMPLEMENTATION_PLAN.md` and `MARKET_AND_CHAIN_DECISION.md` describe the initial prototype exploration and do not supersede the parallel build spec.
