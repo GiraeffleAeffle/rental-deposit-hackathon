@@ -252,62 +252,77 @@ export function Workspace() {
       <div className="main-shell">
         <header className="topbar">
           <div className="breadcrumb">
-            <House size={16} />
-            <span>Cedar Court</span>
-            <ChevronRight size={14} />
-            <strong>Apartment 04</strong>
+            {view === 'connections' ? (
+              <>
+                <ShieldCheck size={16} />
+                <span>Account</span>
+                <ChevronRight size={14} />
+                <strong>Connected proof</strong>
+              </>
+            ) : (
+              <>
+                <House size={16} />
+                <span>Cedar Court</span>
+                <ChevronRight size={14} />
+                <strong>Apartment 04</strong>
+              </>
+            )}
           </div>
-          <div className="topbar-right">
-            <span className="demo-label">
-              <span />
-              Persistent demonstration
-            </span>
-            <button className="reset-button" disabled={busy} onClick={restart}>
-              <RotateCcw size={15} />
-              <span>Restart</span>
-            </button>
-          </div>
+          {view !== 'connections' && (
+            <div className="topbar-right">
+              <span className="demo-label">
+                <span />
+                Persistent demonstration
+              </span>
+              <button className="reset-button" disabled={busy} onClick={restart}>
+                <RotateCcw size={15} />
+                <span>Restart</span>
+              </button>
+            </div>
+          )}
         </header>
         <main id="main" ref={main} className="main-content">
-          <div className="demo-toolbar">
-            <span>
-              <Sparkles size={15} />
-              Try the same journey from every side.
-            </span>
-            <div className="role-switch" role="group" aria-label="Choose demonstration role">
-              {roles.map((item) => (
-                <button
-                  key={item}
+          {view !== 'connections' && (
+            <div className="demo-toolbar">
+              <span>
+                <Sparkles size={15} />
+                Try the same journey from every side.
+              </span>
+              <div className="role-switch" role="group" aria-label="Choose demonstration role">
+                {roles.map((item) => (
+                  <button
+                    key={item}
+                    disabled={busy}
+                    aria-pressed={role === item}
+                    onClick={() => {
+                      setRole(item);
+                      setView('overview');
+                      setConfirmation(null);
+                      setNotice('');
+                    }}
+                  >
+                    {item[0].toUpperCase() + item.slice(1)}
+                  </button>
+                ))}
+              </div>
+              <label className="network-picker">
+                <span className="sr-only">Demonstration network</span>
+                <select
+                  value={network}
                   disabled={busy}
-                  aria-pressed={role === item}
-                  onClick={() => {
-                    setRole(item);
-                    setView('overview');
+                  onChange={(event) => {
+                    setState(null);
+                    setNetwork(event.target.value as Network);
                     setConfirmation(null);
                     setNotice('');
                   }}
                 >
-                  {item[0].toUpperCase() + item.slice(1)}
-                </button>
-              ))}
+                  <option value="solana">Solana · USDC</option>
+                  <option value="robinhood">Robinhood · USDG</option>
+                </select>
+              </label>
             </div>
-            <label className="network-picker">
-              <span className="sr-only">Demonstration network</span>
-              <select
-                value={network}
-                disabled={busy}
-                onChange={(event) => {
-                  setState(null);
-                  setNetwork(event.target.value as Network);
-                  setConfirmation(null);
-                  setNotice('');
-                }}
-              >
-                <option value="solana">Solana · USDC</option>
-                <option value="robinhood">Robinhood · USDG</option>
-              </select>
-            </label>
-          </div>
+          )}
           {notice && (
             <div
               className={`notice ${failed ? 'is-error' : ''}`}
