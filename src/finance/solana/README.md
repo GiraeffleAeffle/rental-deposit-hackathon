@@ -17,7 +17,7 @@
 
 Build instructions with `@solana/kit` 5.x; the root application owns message compilation, blockhash lifetime, Privy signing, Kora/server sponsorship, persistence and broadcast. These helpers do not perform swaps, provide a faucet, manufacture market returns, or sign transactions. `investmentExecutionAvailability()` explicitly reports that real issuer execution remains unavailable in this test prototype.
 
-The restricted test-escrow server integration is implemented in `src/server/solana-service.ts` and `src/server/solana-rpc.ts`. Its [operator setup and HTTP contract](../../../app/api/finance/solana/README.md) explain the required verified deployment, accepted agreement, original-wallet recovery, sponsorship, persistence and unavailable-state gates. The service has no mainnet execution or initialization endpoint.
+The restricted test-escrow server integration is implemented in `src/server/solana-service.ts`, `src/server/solana-initialization.ts` and `src/server/solana-rpc.ts`. Its [operator setup and HTTP contract](../../../app/api/finance/solana/README.md) explain the required verified deployment, accepted agreement, original-wallet recovery, sponsorship, persistence and unavailable-state gates. The initialization endpoint requires both parties' signatures and a separate test fee sponsor. Mainnet execution remains unavailable.
 
 For program actions, match the persisted intent and on-chain nonce as well as token receipts. Claim approval has no token delta and needs the tenancy state transition; it is not a payment. Supply amounts are caps because KLend rounds to whole receipt units; use observed cash/receipt changes rather than assuming the requested amount was fully spent. Never infer settled earnings from an unexplained cash donation.
 

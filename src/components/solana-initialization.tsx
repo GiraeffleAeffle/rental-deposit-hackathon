@@ -99,7 +99,7 @@ export function SolanaInitializationPanel({
     <section className="card operation-section">
       <div className="section-heading">
         <h2>Initialize the Solana tenancy</h2>
-        <Badge tone="neutral">Accepted agreement</Badge>
+        <Badge tone="neutral">Agreement setup</Badge>
       </div>
       <p className="section-copy">
         This step fixes the three participants, test-USDC payout accounts, security amount and release
