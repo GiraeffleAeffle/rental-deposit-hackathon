@@ -2,9 +2,14 @@
 
 import { useSyncExternalStore } from 'react';
 import { useRentalWallet } from './provider.tsx';
+import { pendingInvitationRole } from './pending-invitation.ts';
 import styles from './access-panel.module.css';
 
 const subscribe = () => () => undefined;
+const subscribeHash = (callback: () => void) => {
+  window.addEventListener('hashchange', callback);
+  return () => window.removeEventListener('hashchange', callback);
+};
 const localhostPasskeyUrl = () => {
   if (
     typeof window === 'undefined' ||
@@ -32,6 +37,7 @@ export function WalletAccessPanel({ recoveryProof }: { recoveryProof?: WalletRec
   const access = useRentalWallet();
   const passkeysAvailable = useSyncExternalStore(subscribe, supportsPasskeys, () => false);
   const localPasskeyUrl = useSyncExternalStore(subscribe, localhostPasskeyUrl, () => '');
+  const invitationRole = useSyncExternalStore(subscribeHash, pendingInvitationRole, () => null);
   const disabled = !access.ready || access.busy;
   const hasBothWallets =
     access.wallets.some((wallet) => wallet.chainType === 'ethereum') &&
@@ -66,33 +72,48 @@ export function WalletAccessPanel({ recoveryProof }: { recoveryProof?: WalletRec
       </p>
       {!access.ready && <p role="status">Connecting account access…</p>}
       {!access.authenticated ? (
-        <div className={styles.actions}>
+        <>
+          {invitationRole && (
+            <p className={styles.note}>
+              This invitation is for the {invitationRole}. Use a different email in this browser
+              profile, then add a passkey while signed in. Passkey-first sign-ups can look identical
+              in your device&apos;s account chooser.
+            </p>
+          )}
+          <div className={styles.actions}>
           <button
             type="button"
-            className={styles.primary}
-            disabled={disabled || !passkeysAvailable}
-            onClick={() => run(access.signupWithPasskey)}
-          >
-            Create account with a passkey
-          </button>
+            className={invitationRole ? undefined : styles.primary}
+              disabled={disabled || !passkeysAvailable}
+              onClick={() => run(access.signupWithPasskey)}
+            >
+              Create account with a passkey
+            </button>
+            <button
+              type="button"
+              disabled={disabled || !passkeysAvailable}
+              onClick={() => run(access.loginWithPasskey)}
+            >
+              Sign in with passkey
+            </button>
           <button
             type="button"
-            disabled={disabled || !passkeysAvailable}
-            onClick={() => run(access.loginWithPasskey)}
-          >
-            Sign in with passkey
-          </button>
-          <button
-            type="button"
-            className={styles.textButton}
+            className={invitationRole ? styles.primary : styles.textButton}
             disabled={disabled}
             onClick={access.loginWithBackup}
           >
-            Use email access
-          </button>
-        </div>
+            {invitationRole ? 'Continue with email' : 'Use email access'}
+            </button>
+          </div>
+        </>
       ) : (
         <>
+          {invitationRole && (
+            <p className={styles.note}>
+              This invitation is for the {invitationRole}. Check the linked email below before
+              joining; an account already assigned to another role cannot join again.
+            </p>
+          )}
           <ol className={styles.steps}>
             <li>
               <div>
@@ -116,7 +137,7 @@ export function WalletAccessPanel({ recoveryProof }: { recoveryProof?: WalletRec
                 <strong>Backup access</strong>
                 <span>
                   {access.backupLoginLinked
-                    ? 'Email linked and verified'
+                    ? `Email linked and verified: ${access.backupEmail}`
                     : 'Add an email you can access elsewhere'}
                 </span>
               </div>

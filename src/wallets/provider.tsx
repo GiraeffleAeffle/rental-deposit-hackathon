@@ -32,10 +32,16 @@ import {
 import type { RentalWallet, RentalWalletAccess } from './types.ts';
 import { validateRecoveryRequest } from './recovery.ts';
 import { prepareEscrowTypedData } from './escrow-signing.ts';
+import { pendingInvitationRole } from './pending-invitation.ts';
 
 const unavailable = async (): Promise<never> => {
   throw new Error('Account access is not configured yet.');
 };
+
+function passkeyNameForInvitation() {
+  const role = pendingInvitationRole();
+  return role ? `Rental workspace · ${role}` : 'Rental workspace';
+}
 
 function walletActionError(cause: unknown, action: 'passkey' | 'wallet') {
   const name = cause instanceof Error ? cause.name : '';
@@ -69,6 +75,7 @@ const inactiveAccess: RentalWalletAccess = {
   wallets: [],
   passkeyCount: 0,
   backupLoginLinked: false,
+  backupEmail: null,
   busy: false,
   error: null,
   loginWithPasskey: unavailable,
@@ -170,7 +177,8 @@ function ActiveWalletAccess({ children }: { children: ReactNode }) {
 
   const linkedAccounts = authenticated ? (user?.linkedAccounts ?? []) : [];
   const passkeyCount = linkedAccounts.filter((account) => account.type === 'passkey').length;
-  const backupLoginLinked = linkedAccounts.some((account) => account.type === 'email');
+  const backupEmail = linkedAccounts.find((account) => account.type === 'email')?.address ?? null;
+  const backupLoginLinked = backupEmail !== null;
   const wallets: RentalWallet[] = [];
   for (const account of linkedAccounts) {
     if (
@@ -231,6 +239,7 @@ function ActiveWalletAccess({ children }: { children: ReactNode }) {
     wallets,
     passkeyCount,
     backupLoginLinked,
+    backupEmail,
     busy,
     error,
     loginWithPasskey: () => runAction(() => loginWithPasskey(), 'passkey'),
@@ -242,7 +251,7 @@ function ActiveWalletAccess({ children }: { children: ReactNode }) {
     addPasskey: () =>
       runAction(async () => {
         requireSession();
-        await linkWithPasskey({ name: 'Rental workspace' });
+        await linkWithPasskey({ name: passkeyNameForInvitation() });
       }, 'passkey'),
     addBackupEmail: () => {
       requireSession();

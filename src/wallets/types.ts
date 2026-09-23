@@ -36,6 +36,7 @@ export interface RentalWalletAccess {
   wallets: RentalWallet[];
   passkeyCount: number;
   backupLoginLinked: boolean;
+  backupEmail: string | null;
   busy: boolean;
   error: string | null;
   loginWithPasskey: () => Promise<void>;
