@@ -21,7 +21,7 @@ The module never calls server wallet-signing endpoints, attaches session signers
 
 ## Provider activation
 
-The user signed in and created the `hackathon` development app. Email and passkey login are enabled. `http://127.0.0.1:4175` is its allowed local origin. The wallet environment reports TEE enabled; smart wallets and additional authorization keys remain off. The public app ID and a new server secret are set in the user's ignored local `.env.local`. A read-only `client.users().list({limit: 1})` request authenticated and returned zero users. This checks the credential, not the full identity flow. No live passkey signup or original-wallet recovery has been rehearsed. No secret is in the repository; a clean checkout needs its own secure configuration.
+The user signed in and created the `hackathon` development app. Email and passkey login are enabled. `http://localhost:4175` is its local passkey origin. The wallet environment reports TEE enabled; smart wallets and additional authorization keys remain off. The public app ID and a new server secret are set in the user's ignored local `.env.local`. A read-only `client.users().list({limit: 1})` request authenticated and returned zero users. This checks the credential, not the full identity flow. An initial signup attempt on `http://127.0.0.1:4175` failed before a device prompt and created no user. The app and local configuration now use `localhost`, which [WebAuthn permits on HTTP](https://www.w3.org/TR/webauthn/#rp-id); retry on that hostname is pending. No secret is in the repository; a clean checkout needs its own secure configuration.
 
 Remaining setup:
 

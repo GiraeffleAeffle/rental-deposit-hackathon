@@ -6,8 +6,8 @@ import { IdentityError } from '../wallets/identity-policy.ts';
 export function sameOrigin(request: Request) {
   const origin = request.headers.get('origin');
   const url = new URL(request.url);
-  // Next's development server rewrites Request.url to localhost even when the
-  // browser uses 127.0.0.1. Only its loopback Host spelling is accepted here.
+  // Next's development server may rewrite Request.url to a different loopback
+  // spelling. Only these local Host spellings are accepted here.
   const host = request.headers.get('host');
   if (
     process.env.NODE_ENV !== 'production' &&

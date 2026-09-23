@@ -5,8 +5,20 @@ import { useRentalWallet } from './provider.tsx';
 import styles from './access-panel.module.css';
 
 const subscribe = () => () => undefined;
+const localhostPasskeyUrl = () => {
+  if (
+    typeof window === 'undefined' ||
+    window.location.protocol !== 'http:' ||
+    window.location.hostname !== '127.0.0.1'
+  )
+    return '';
+  const url = new URL(window.location.href);
+  url.hostname = 'localhost';
+  return url.href;
+};
 const supportsPasskeys = () =>
   typeof window !== 'undefined' &&
+  !localhostPasskeyUrl() &&
   window.isSecureContext &&
   typeof PublicKeyCredential !== 'undefined';
 
@@ -19,6 +31,7 @@ export interface WalletRecoveryProof {
 export function WalletAccessPanel({ recoveryProof }: { recoveryProof?: WalletRecoveryProof }) {
   const access = useRentalWallet();
   const passkeysAvailable = useSyncExternalStore(subscribe, supportsPasskeys, () => false);
+  const localPasskeyUrl = useSyncExternalStore(subscribe, localhostPasskeyUrl, () => '');
   const disabled = !access.ready || access.busy;
   const hasBothWallets =
     access.wallets.some((wallet) => wallet.chainType === 'ethereum') &&
@@ -185,8 +198,17 @@ export function WalletAccessPanel({ recoveryProof }: { recoveryProof?: WalletRec
       )}
       {!passkeysAvailable && access.ready && (
         <p className={styles.note}>
-          Passkeys need a supported browser on HTTPS or localhost. Email access remains available;
-          add your passkey from a supported device before funding.
+          {localPasskeyUrl ? (
+            <>
+              Passkeys cannot start from this IP address. Open the same app at{' '}
+              <a href={localPasskeyUrl}>localhost</a> and create your passkey there.
+            </>
+          ) : (
+            <>
+              Passkeys need a supported browser on HTTPS or localhost. Email access remains
+              available; add your passkey from a supported device before funding.
+            </>
+          )}
         </p>
       )}
       {access.error && (

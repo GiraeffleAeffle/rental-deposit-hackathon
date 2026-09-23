@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync, chmodSync, existsSync } from 'node:fs';
 const path = '.env.local';
 let content = existsSync(path) ? readFileSync(path, 'utf8') : '';
 const defaults = {
-  APP_ORIGIN: 'http://127.0.0.1:4175',
+  APP_ORIGIN: 'http://localhost:4175',
   LOCAL_DATABASE_PATH: '.data/rental.sqlite',
   ALLOW_LOCAL_STORE: '1',
   RECONCILE_SECRET: randomBytes(32).toString('hex'),
@@ -21,4 +21,4 @@ console.log(
     ? `Local configuration prepared: ${added.join(', ')}. Secret values were not printed.`
     : 'Existing local configuration preserved.',
 );
-console.log('Start with npm run dev. Native sending and provider credentials remain unset.');
+console.log('Start with npm run dev. Add provider credentials locally before connected tests.');

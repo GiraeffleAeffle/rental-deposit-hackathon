@@ -36,6 +36,28 @@ const unavailable = async (): Promise<never> => {
   throw new Error('Account access is not configured yet.');
 };
 
+function walletActionError(cause: unknown, action: 'passkey' | 'wallet') {
+  const name = cause instanceof Error ? cause.name : '';
+  const rawCode =
+    cause && typeof cause === 'object' && 'privyErrorCode' in cause
+      ? cause.privyErrorCode
+      : undefined;
+  const code =
+    typeof rawCode === 'string' && /^[a-z][a-z0-9_]{0,63}$/.test(rawCode) ? rawCode : undefined;
+  if (name === 'NotAllowedError' || code === 'passkey_not_allowed')
+    return action === 'passkey'
+      ? 'The passkey request was cancelled or blocked. Try again from a supported browser.'
+      : 'Request cancelled. You can try again.';
+  if (action === 'passkey') {
+    if (name === 'SecurityError' || name === 'NotSupportedError' || code === 'not_supported')
+      return 'This browser or address cannot create a passkey. Open http://localhost:4175 in a supported browser.';
+    if (code === 'client_request_timeout')
+      return 'The passkey service timed out. Check your connection and try again.';
+    return `Passkey setup did not complete${code ? ` (${code})` : ''}. Open http://localhost:4175 in a supported browser and try again.`;
+  }
+  return 'The wallet request was not completed. Check your connection and try again.';
+}
+
 const inactiveAccess: RentalWalletAccess = {
   configured: false,
   ready: true,
@@ -169,7 +191,10 @@ function ActiveWalletAccess({ children }: { children: ReactNode }) {
     });
   }
 
-  async function runAction<T>(action: () => Promise<T>): Promise<T> {
+  async function runAction<T>(
+    action: () => Promise<T>,
+    kind: 'passkey' | 'wallet' = 'wallet',
+  ): Promise<T> {
     if (inFlight.current) throw new Error('Finish the current wallet request first.');
     inFlight.current = true;
     setBusy(true);
@@ -177,12 +202,7 @@ function ActiveWalletAccess({ children }: { children: ReactNode }) {
     try {
       return await action();
     } catch (cause) {
-      const cancelled = cause instanceof DOMException && cause.name === 'NotAllowedError';
-      setError(
-        cancelled
-          ? 'Request cancelled. You can try again.'
-          : 'The wallet request was not completed. Check your connection and try again.',
-      );
+      setError(walletActionError(cause, kind));
       throw cause;
     } finally {
       inFlight.current = false;
@@ -204,8 +224,8 @@ function ActiveWalletAccess({ children }: { children: ReactNode }) {
     backupLoginLinked,
     busy,
     error,
-    loginWithPasskey: () => runAction(() => loginWithPasskey()),
-    signupWithPasskey: () => runAction(() => signupWithPasskey()),
+    loginWithPasskey: () => runAction(() => loginWithPasskey(), 'passkey'),
+    signupWithPasskey: () => runAction(() => signupWithPasskey(), 'passkey'),
     loginWithBackup: () => {
       setError(null);
       login({ loginMethods: ['email'] });
@@ -214,7 +234,7 @@ function ActiveWalletAccess({ children }: { children: ReactNode }) {
       runAction(async () => {
         requireSession();
         await linkWithPasskey({ name: 'Rental workspace' });
-      }),
+      }, 'passkey'),
     addBackupEmail: () => {
       requireSession();
       setError(null);

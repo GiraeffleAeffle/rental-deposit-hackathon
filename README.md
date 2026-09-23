@@ -14,7 +14,7 @@ npm run setup
 npm run dev
 ```
 
-Open [the workspace](http://127.0.0.1:4175). Setup creates a private `.env.local` without printing secrets. The walkthrough works without accounts, wallets or funds and persists in local SQLite across reloads. All walkthrough people, homes, balances and transactions are fictional; the role selector belongs only to this demonstration.
+Open [the workspace](http://localhost:4175). Use this hostname for passkeys; WebAuthn cannot use an IP address as its relying-party ID. Setup creates a private `.env.local` without printing secrets. The walkthrough works without accounts, wallets or funds and persists in local SQLite across reloads. All walkthrough people, homes, balances and transactions are fictional; the role selector belongs only to this demonstration.
 
 1. Choose Robinhood or Solana. Accept the agreement as tenant and landlord.
 2. As tenant, review and authorize the 3,000-unit deposit, then check its result and supply it to lending.

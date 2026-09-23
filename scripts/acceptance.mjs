@@ -5,12 +5,12 @@
 import { createHash, randomUUID } from 'node:crypto';
 
 if (process.argv.includes('--help')) {
-  console.log('Usage: APP_ORIGIN=http://127.0.0.1:4175 node scripts/acceptance.mjs');
+  console.log('Usage: APP_ORIGIN=http://localhost:4175 node scripts/acceptance.mjs');
   console.log('Exercises fictional HTTP workflows in fresh sessions. The origin must be loopback.');
   process.exit(0);
 }
 
-const suppliedOrigin = process.env.APP_ORIGIN || 'http://127.0.0.1:4175';
+const suppliedOrigin = process.env.APP_ORIGIN || 'http://localhost:4175';
 let origin;
 try {
   const url = new URL(suppliedOrigin);
