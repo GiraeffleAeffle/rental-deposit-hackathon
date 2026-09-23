@@ -29,6 +29,7 @@ function AccountConnections() {
   const [identity, setIdentity] = useState<IdentitySnapshot | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [requestReady, setRequestReady] = useState(false);
   const requests = useRef<AbortController | null>(null);
   const disabled = busy || wallet.busy || !wallet.ready;
   const authorized = useCallback(
@@ -66,8 +67,14 @@ function AccountConnections() {
       .then(setStatus)
       .catch(() => {
         if (!controller.signal.aborted) setError('Connection status could not be loaded.');
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setRequestReady(true);
       });
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      requests.current = null;
+    };
   }, []);
   function rememberIdentity(next: IdentitySnapshot) {
     if (!wallet.authenticated || next.profile.subject !== wallet.subject)
@@ -173,7 +180,7 @@ function AccountConnections() {
           )}
         </section>
       )}
-      {wallet.authenticated && <ConnectedAgreements request={authorized} />}
+      {wallet.authenticated && requestReady && <ConnectedAgreements request={authorized} />}
       <div className="connection-grid">
         <section className="card">
           <span className="eyebrow">SHARED APPLICATION</span>

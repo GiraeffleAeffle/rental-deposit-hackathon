@@ -77,6 +77,12 @@ export function Workspace() {
   const totals = state ? summary(state) : null;
 
   useEffect(() => {
+    const agreementId = new URLSearchParams(window.location.search).get('agreement');
+    if (!agreementId || !/^[a-zA-Z0-9_-]{1,160}$/.test(agreementId)) return;
+    const frame = window.requestAnimationFrame(() => setView('connections'));
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+  useEffect(() => {
     const controller = new AbortController();
     api('/api/demo', { network }, controller.signal)
       .then((result) => {

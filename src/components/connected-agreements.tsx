@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, Copy, RefreshCw } from 'lucide-react';
 import { parseAmount, type Network } from '@/domain/assets';
 import type { getAgreement } from '@/server/agreements';
@@ -23,6 +23,30 @@ export function ConnectedAgreements({
   const [recordBody, setRecordBody] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const initialRequest = useRef(request);
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('agreement');
+    if (!id || !/^[a-zA-Z0-9_-]{1,160}$/.test(id)) return;
+    let active = true;
+    void initialRequest
+      .current(`/api/agreements/${encodeURIComponent(id)}`)
+      .then((result) => {
+        if (!active) return;
+        setAgreement((result as { agreement: AgreementView }).agreement);
+        setIdentifier(id);
+      })
+      .catch((error) => {
+        if (active) setMessage(error instanceof Error ? error.message : 'Tenancy unavailable.');
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+  function remember(id: string) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('agreement', id);
+    window.history.replaceState(null, '', url.pathname + url.search);
+  }
   async function run(action: () => Promise<void>) {
     if (busy) return;
     setBusy(true);
@@ -41,6 +65,7 @@ export function ConnectedAgreements({
     };
     setAgreement(result.agreement);
     setIdentifier(id);
+    remember(id);
   }
   async function invite(role: 'tenant' | 'arbitrator') {
     if (!agreement) return;
@@ -67,7 +92,7 @@ export function ConnectedAgreements({
     setAgreement(result.agreement);
     setInvitation('');
     setIdentifier(result.agreement.id);
-    window.history.replaceState(null, '', window.location.pathname);
+    remember(result.agreement.id);
     setMessage('You joined with your verified account. Review the full terms before acceptance.');
   }
   const allAccepted = agreement?.accepted.landlord && agreement.accepted.tenant;
@@ -101,6 +126,7 @@ export function ConnectedAgreements({
                 })) as { agreement: AgreementView };
                 setAgreement(result.agreement);
                 setIdentifier(result.agreement.id);
+                remember(result.agreement.id);
               });
             }}
           >
@@ -361,6 +387,9 @@ export function ConnectedAgreements({
             onClick={() => {
               setAgreement(null);
               setLink('');
+              const url = new URL(window.location.href);
+              url.searchParams.delete('agreement');
+              window.history.replaceState(null, '', url.pathname + url.search);
             }}
           >
             Open another tenancy
