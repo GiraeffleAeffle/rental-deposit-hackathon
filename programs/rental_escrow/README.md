@@ -2,7 +2,7 @@
 
 This prototype has a real Anchor program and a restricted Kamino supply/redemption CPI path. It is **not deployed**. Default builds reject initialization; `test-deployment` permits only Circle's devnet test USDC mint and deposits up to 10,000 test units. There is no mainnet-write feature.
 
-The test program ID is `BiwaGavQUsSsg48UPpRAGWoXSiUnzgvdDs7rd8WizvPD`. `Anchor.toml` selects localnet. A generated deployment key exists only in the task's temporary build directory and must never be committed. The client requires an explicit deployment manifest, genesis hash and reviewed program hash before it can plan test-network writes.
+The test program ID is `BiwaGavQUsSsg48UPpRAGWoXSiUnzgvdDs7rd8WizvPD`. `Anchor.toml` selects localnet. On the original operator machine, the matching test program keypair and reviewed `.so` are preserved in the ignored `.testnet-secrets/solana/` directory; neither is committed or supplied to other checkouts. The keypair file is mode 0600. The client requires an explicit deployment manifest, genesis hash and reviewed program hash before it can plan test-network writes.
 
 | Action | Authority and result |
 | --- | --- |
