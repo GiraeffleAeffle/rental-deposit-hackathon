@@ -96,7 +96,7 @@ export function SolanaInitializationPanel({
     );
   }
   return (
-    <section className="card operation-section">
+    <section className="card operation-section" id="solana-setup">
       <div className="section-heading">
         <h2>Initialize the Solana tenancy</h2>
         <Badge tone="neutral">Agreement setup</Badge>

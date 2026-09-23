@@ -181,6 +181,7 @@ function AccountConnections() {
         </section>
       )}
       {wallet.authenticated && requestReady && <ConnectedAgreements request={authorized} />}
+      {wallet.authenticated && <SolanaInitializationPanel request={authorized} />}
       <div className="connection-grid">
         <section className="card">
           <span className="eyebrow">SHARED APPLICATION</span>
@@ -239,7 +240,11 @@ function AccountConnections() {
             <StatusItem
               ready
               title="Solana: escrow and Kamino integration"
-              detail="The compiled escrow and actual KLend program pass local SVM funding, lending, release and settlement checks. A deployed test escrow remains to be configured."
+              detail={
+                status?.solana.deployment
+                  ? 'The local SVM proof passes, and a pinned devnet escrow is configured for this app. An accepted tenancy still needs both setup signatures before funding.'
+                  : 'The compiled escrow and actual KLend program pass local SVM funding, lending, release and settlement checks. A deployed test escrow remains to be configured.'
+              }
             />
             <StatusItem
               ready={false}
@@ -326,7 +331,6 @@ function AccountConnections() {
       {wallet.authenticated && (
         <>
           <NativeRobinhood request={authorized} />
-          <SolanaInitializationPanel request={authorized} />
           <NativeSolana request={authorized} />
         </>
       )}

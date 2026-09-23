@@ -275,10 +275,17 @@ export function ConnectedAgreements({
                   )}
               </div>
               {allAccepted && (
-                <p className="note">
-                  Both parties accepted the same terms. This records consent; the deposit becomes
-                  funded only after a verified custody transaction.
-                </p>
+                <>
+                  <p className="note">
+                    Both parties accepted the same terms. This records consent; the deposit becomes
+                    funded only after a verified custody transaction.
+                  </p>
+                  {agreement.network === 'solana' && (
+                    <a className="button primary" href="#solana-setup">
+                      Continue to Solana setup <ArrowRight size={16} />
+                    </a>
+                  )}
+                </>
               )}
             </div>
             <div>
