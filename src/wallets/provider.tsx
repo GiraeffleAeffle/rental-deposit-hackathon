@@ -49,6 +49,8 @@ function walletActionError(cause: unknown, action: 'passkey' | 'wallet') {
       ? 'The passkey request was cancelled or blocked. Try again from a supported browser.'
       : 'Request cancelled. You can try again.';
   if (action === 'passkey') {
+    if (code === 'disallowed_login_method')
+      return 'Passkey sign-up is disabled in the Privy app settings. Ask the app operator to enable it.';
     if (name === 'SecurityError' || name === 'NotSupportedError' || code === 'not_supported')
       return 'This browser or address cannot create a passkey. Open http://localhost:4175 in a supported browser.';
     if (code === 'client_request_timeout')
@@ -107,7 +109,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     <PrivyProvider
       appId={appId}
       config={{
-        loginMethods: ['email'],
+        loginMethods: ['email', 'passkey'],
         appearance: {
           theme: 'light',
           accentColor: '#245B4A',
