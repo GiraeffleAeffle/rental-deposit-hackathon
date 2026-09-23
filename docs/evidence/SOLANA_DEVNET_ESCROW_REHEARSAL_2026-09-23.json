@@ -1,0 +1,87 @@
+{
+  "network": "solana-devnet",
+  "genesisHash": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+  "observedAt": "2026-09-23T13:06:22.883Z",
+  "operatorOnly": true,
+  "tenancy": "BJ4xahTU26gmKE843Go9VU2segQjZTdyTEXHRfXX1wdW",
+  "principalAtomic": "10000000",
+  "faucetAmountAtomic": "20000000",
+  "observations": [
+    {
+      "kind": "initialize",
+      "signature": "MF2BGpggYGZ6mLdWJzQZVaxFPrTKhs1NyLyNj6FA1Z9nRELgbU5nQSTNkDAHjYobmqPMsyZcAJ7soz8pN4sbgx6",
+      "slot": 502955881,
+      "transactionError": null,
+      "feeLamports": 15000,
+      "unitsConsumed": 33544,
+      "instructions": ["Initialize"]
+    },
+    {
+      "kind": "fund",
+      "signature": "63NyzrRo6gQVvJi78t4Sb8E1oYMCByTWwskLX7vJCmBr1ghDXXmhetNpNMzwAVpJeiARjmUZxpqR24v5YdRAo8pZ",
+      "slot": 502955980,
+      "transactionError": null,
+      "feeLamports": 10000,
+      "unitsConsumed": 11220,
+      "instructions": ["Fund"]
+    },
+    {
+      "kind": "supply",
+      "signature": "XcXjJKa5356oGhCEHAciUjSpK4kC8noN4Ge3krRScJVKwnkHLDvGF5JvSyAbLfT5w6dYud1gVfeHKATwJyYNfQ4",
+      "slot": 502958164,
+      "transactionError": null,
+      "feeLamports": 10000,
+      "unitsConsumed": 97001,
+      "instructions": ["Supply", "RefreshReserve", "DepositReserveLiquidity"]
+    },
+    {
+      "kind": "redeem",
+      "signature": "2cWKutz8UbGVDaUn4cxpg6JuC4ytsM4TDaWUV4v7gp7MJgRQMZzEF5LULWeB6KSEbC7RQMtdCwwn6ZVvACzsBbfF",
+      "slot": 502958328,
+      "transactionError": null,
+      "feeLamports": 10000,
+      "unitsConsumed": 85736,
+      "instructions": ["Redeem", "RefreshReserve", "RedeemReserveCollateral"]
+    },
+    {
+      "kind": "propose_no_claim",
+      "signature": "5R9dD6vjDDZXSMamwJwiURdbNW1VCRgVkpAVbE6PNLDbvgefQUPPWnvspnzhZtt8pSJeR6bRtbUFqVb3vNjXBZYQ",
+      "slot": 502958880,
+      "transactionError": null,
+      "feeLamports": 10000,
+      "unitsConsumed": 4597,
+      "instructions": ["ProposeClaim"]
+    },
+    {
+      "kind": "accept_no_claim",
+      "signature": "2rg7PqBEeef6LcSipD6NmxSeDDayLt4wj5XCr6UQm67m6Xp9RLsn2bdhBKjhx5AzdLrgwhKGLdGPkRxC2JP1QNzL",
+      "slot": 502958991,
+      "transactionError": null,
+      "feeLamports": 10000,
+      "unitsConsumed": 4601,
+      "instructions": ["RespondToClaim"]
+    },
+    {
+      "kind": "settle",
+      "signature": "jqFERxUWyPgzeGUZc9jBZJRvYTMY1WihezR9Fj69sq14unqaAxCBvyeozL4wW57DgtQtNDazhVQND77P4xaGG7D",
+      "slot": 502959098,
+      "transactionError": null,
+      "feeLamports": 10000,
+      "unitsConsumed": 11755,
+      "instructions": ["Settle"]
+    }
+  ],
+  "finalAccountObservation": {
+    "slot": 502959454,
+    "codeHashVerified": true,
+    "phase": "closed",
+    "nextNonce": "6",
+    "trackedIdleAtomic": "0",
+    "trackedReceiptsAtomic": "0",
+    "actualCashAtomic": "0",
+    "actualReceiptsAtomic": "0",
+    "tenantUsdcAtomic": "20000000",
+    "landlordUsdcAtomic": "0"
+  },
+  "limit": "This is a devnet operator-key rehearsal with faucet tokens and a zero claim. It does not show Privy signatures, an accepted app agreement, organic earnings, personal investment, a disputed claim, fiat rails or production use."
+}

@@ -236,7 +236,7 @@ console.log(
       depositMint: SOLANA_DEVNET_MANIFEST.deposit.mint,
       accountStateOnly: true,
       caveat:
-        'No refresh, deposit, redemption, yield, issuer route or escrow deployment was executed.',
+        'This is a read-only account probe. Operator deployment and transaction receipts are recorded separately; this output alone proves no execution, yield or issuer route.',
       candidates,
     },
     null,

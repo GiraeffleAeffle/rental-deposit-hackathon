@@ -27,7 +27,7 @@ binary=data[45:];assert binary[:4]==b'\x7fELF';(out/'klend.so').write_bytes(bina
 keys=['D6q6wuQSrifJKZYpR1M8R4YawnLDtDsMmWM1NbBmgJ59','7u3HeHxYDLhnCoErrtycNokbQYbWGzLs6JSDqGAv5PfF','SysvarC1ock11111111111111111111111111111111']
 result=rpc('getMultipleAccounts',[keys,{'encoding':'base64','commitment':'finalized'}])
 accounts=dict(zip(keys,result['value']));reserve=base64.b64decode(result['value'][0]['data'][0])
-oracles=list(dict.fromkeys(b58encode(reserve[n:n+32])for n in [5112,5160,5192,5224]));oracles=[k for k in oracles if k not in ['11111111111111111111111111111111',program]]
+oracles=list(dict.fromkeys(b58encode(reserve[n:n+32])for n in [5112,5160,5192,5224]));oracles=[k for k in oracles if k not in ['11111111111111111111111111111111','nu11111111111111111111111111111111111111111',program]]
 if oracles:
  time.sleep(1)
  more=rpc('getMultipleAccounts',[oracles,{'encoding':'base64','commitment':'finalized'}]);accounts.update(zip(oracles,more['value']))

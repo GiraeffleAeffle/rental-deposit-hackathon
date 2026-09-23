@@ -9,6 +9,15 @@ use klend_interface::{
     ReserveInfo, KLEND_PROGRAM_ID,
 };
 
+// KLend treats this key as an absent oracle. The pinned klend-interface's
+// ReserveInfo::from_reserve only filters Pubkey::default(), so forwarding its
+// Some(NULL_PUBKEY) to RefreshReserve fails oracle configuration validation.
+const NULL_ORACLE: Pubkey = pubkey!("nu11111111111111111111111111111111111111111");
+
+fn configured_oracle(key: Option<Pubkey>) -> Option<Pubkey> {
+    key.filter(|value| *value != NULL_ORACLE)
+}
+
 pub struct Snapshot {
     pub info: ReserveInfo,
     pub net_sf: u128,
@@ -152,10 +161,10 @@ pub fn refresh<'info>(
         klend_interface::instructions::refresh::RefreshReserveAccounts {
             reserve: before.info.address,
             lending_market: before.info.lending_market,
-            pyth_oracle: before.info.pyth_oracle,
-            switchboard_price_oracle: before.info.switchboard_price_oracle,
-            switchboard_twap_oracle: before.info.switchboard_twap_oracle,
-            scope_prices: before.info.scope_prices,
+            pyth_oracle: configured_oracle(before.info.pyth_oracle),
+            switchboard_price_oracle: configured_oracle(before.info.switchboard_price_oracle),
+            switchboard_twap_oracle: configured_oracle(before.info.switchboard_twap_oracle),
+            scope_prices: configured_oracle(before.info.scope_prices),
         },
     );
     invoke_built(accounts, remaining, &ix)?;
@@ -226,6 +235,33 @@ pub fn redeem<'info>(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    #[test]
+    fn null_oracle_sentinel_is_omitted_from_kamino_refresh() {
+        assert_eq!(configured_oracle(Some(NULL_ORACLE)), None);
+        assert_eq!(
+            configured_oracle(Some(Pubkey::default())),
+            Some(Pubkey::default())
+        );
+        let real = pubkey!("Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX");
+        assert_eq!(configured_oracle(Some(real)), Some(real));
+        let ix = klend_interface::instructions::refresh::refresh_reserve(
+            klend_interface::instructions::refresh::RefreshReserveAccounts {
+                reserve: Pubkey::new_unique(),
+                lending_market: Pubkey::new_unique(),
+                pyth_oracle: configured_oracle(Some(NULL_ORACLE)),
+                switchboard_price_oracle: configured_oracle(Some(NULL_ORACLE)),
+                switchboard_twap_oracle: configured_oracle(Some(NULL_ORACLE)),
+                scope_prices: configured_oracle(Some(real)),
+            },
+        );
+        assert!(ix.accounts[2..5]
+            .iter()
+            .all(|account| account.pubkey == KLEND_PROGRAM_ID));
+        assert_eq!(ix.accounts[5].pubkey, real);
+    }
+
     use klend_interface::state::{
         LendingMarket, Reserve, ReserveCollateral, ReserveConfig, ReserveLiquidity, TokenInfo,
     };

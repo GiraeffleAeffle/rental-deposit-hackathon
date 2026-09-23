@@ -53,6 +53,12 @@ test("reserve decoder validates owner, discriminator, exact pinned layout and al
   for (const [offset, amount] of [[344, 2n], [360, 3n], [376, 1n]] as const) view.setBigUint64(offset, amount << 60n, true);
   const account = { address: reserve, owner: SOLANA_IDS.klend, executable: false, data };
   assert.equal(decodeKaminoReserve(account).netLiquidityScaled, (104n << 60n).toString());
+  const nullOracle = "nu11111111111111111111111111111111111111111";
+  data.set(getAddressEncoder().encode(address(nullOracle)), 5112);
+  data.set(getAddressEncoder().encode(address(nullOracle)), 5160);
+  data.set(getAddressEncoder().encode(address(nullOracle)), 5192);
+  data.set(getAddressEncoder().encode(address(inputAccount)), 5224);
+  assert.deepEqual(decodeKaminoReserve(account).oracleAccounts, [inputAccount]);
   assert.throws(() => decodeKaminoReserve({ ...account, owner: program }));
   assert.throws(() => decodeKaminoReserve({ ...account, data: data.slice(0, -1) }));
   data[0] = 0; assert.throws(() => decodeKaminoReserve(account));

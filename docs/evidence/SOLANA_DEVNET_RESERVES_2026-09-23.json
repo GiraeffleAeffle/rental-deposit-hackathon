@@ -1,12 +1,12 @@
 {
-  "observedAt": "2026-09-23T12:09:51.469Z",
+  "observedAt": "2026-09-23T13:08:28.710Z",
   "rpcUrl": "https://api.devnet.solana.com",
   "genesisHash": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
-  "listingSlot": 502938872,
-  "accountSlot": 502938873,
+  "listingSlot": 502960070,
+  "accountSlot": 502960072,
   "depositMint": "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
   "accountStateOnly": true,
-  "caveat": "No refresh, deposit, redemption, yield, issuer route or escrow deployment was executed.",
+  "caveat": "This is a read-only account probe. Operator deployment and transaction receipts are recorded separately; this output alone proves no execution, yield or issuer route.",
   "candidates": [
     {
       "reserve": "9uKMtFU9UJ9DfbwzCReGENb31appi79KTEeDGdCnvMjy",
@@ -32,22 +32,21 @@
     {
       "reserve": "HRwMj8uuoGVWCanKzKvpTWN5ZvXjtjKGxcFbn2qTPKMW",
       "market": "6aaNTBEmwdN19AAdTwbNrWyUo6iEyiLguxCTePEzSqoH",
-      "availableAtomic": "224546128",
-      "lastUpdateSlot": "502937362",
+      "availableAtomic": "223641308",
+      "lastUpdateSlot": "502959780",
       "active": true,
       "compatibleAccountState": true,
       "liquiditySupply": "6icVFmuKEsH5dzDwTSrxzrnJ14N27gDKRc2XAxPtB4ep",
       "receiptMint": "6FY2rwh5wWrtSveAG9t9ANc2YsrChNasVSEpMQubJcXd",
       "marketAuthority": "7Aoc3MHQkYSB5y3g3ipyFKWF2TBsYdvqNWHbQ2btWXJt",
       "oracleAccounts": [
-        "nu11111111111111111111111111111111111111111",
         "Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX"
       ],
-      "availableLiquidityAtomic": "224546128",
+      "availableLiquidityAtomic": "223641308",
       "marketEmergency": false,
-      "vaultAtomic": "224546128",
+      "vaultAtomic": "223641308",
       "receiptMintDecimals": 6,
-      "receiptMintSupplyAtomic": "224446128",
+      "receiptMintSupplyAtomic": "223541308",
       "receiptSupplyDifferenceAtomic": "100000",
       "requiresRefresh": true
     },
@@ -62,7 +61,6 @@
       "receiptMint": "8ozPJugFZRBy1qUqZJiLKVxpdW3bn8sGJQY6TnBbFKqV",
       "marketAuthority": "21wU9AsT1DCRWq86jMmg9hv7BwEBE4A2P3eieK5VxmCN",
       "oracleAccounts": [
-        "nu11111111111111111111111111111111111111111",
         "Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX"
       ],
       "availableLiquidityAtomic": "42311258",
@@ -105,7 +103,6 @@
       "receiptMint": "4PmR5ZTz3BUATcNiC4h5K15fh7oE6p9W6Sk89VggaUAS",
       "marketAuthority": "8QGcuP5VWAaG1pJnTSWVfkskx3eYnpoKMqmzpQcktWY",
       "oracleAccounts": [
-        "nu11111111111111111111111111111111111111111",
         "Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX"
       ],
       "availableLiquidityAtomic": "10100000",
@@ -127,7 +124,6 @@
       "receiptMint": "7fqonSAg9yzk9qvCY1manXRubuxBgQUE4G7nNp8fzmik",
       "marketAuthority": "69ZuCpJ15zH96C4Zzn67amnghSBfvrby5C7CsK5dv1sW",
       "oracleAccounts": [
-        "nu11111111111111111111111111111111111111111",
         "Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX"
       ],
       "availableLiquidityAtomic": "10100000",
@@ -149,7 +145,6 @@
       "receiptMint": "F2ecQWwttjR14UTsHsnfC5ErLUGeU7HFYKVJkQxBafG6",
       "marketAuthority": "FBXzZUJkioeKEHBaWYoxggwPjgYTTc6JEUtV9N1zm4oj",
       "oracleAccounts": [
-        "nu11111111111111111111111111111111111111111",
         "Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX"
       ],
       "availableLiquidityAtomic": "9700327",
@@ -171,7 +166,6 @@
       "receiptMint": "6kFmnUKDqcS7pLSKGpPx1uedW92VCsSTUBtAVbN3iUc3",
       "marketAuthority": "9hp13gfjqCyX6Dgj6kxUePtCzt2ieYekkSBXAAd9hrBZ",
       "oracleAccounts": [
-        "nu11111111111111111111111111111111111111111",
         "Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX"
       ],
       "availableLiquidityAtomic": "9700310",
@@ -193,7 +187,6 @@
       "receiptMint": "5WKEtKuaGv1VmczZKHeYdap6NxRCNFybprkz23rKuYG2",
       "marketAuthority": "8CCtPHeve9SRPp4UZKeFHPJLrH13jmPQbCfCA3mTuFF8",
       "oracleAccounts": [
-        "nu11111111111111111111111111111111111111111",
         "Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX"
       ],
       "availableLiquidityAtomic": "5630000",
@@ -215,7 +208,6 @@
       "receiptMint": "9USam2K2z7N39KymahcWGNsc1jc3SYqKRNDb29Se9vi1",
       "marketAuthority": "99sysErzjniwGF2ykDkqdnG9CsqfroggnirBaQxptqY1",
       "oracleAccounts": [
-        "nu11111111111111111111111111111111111111111",
         "Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX"
       ],
       "availableLiquidityAtomic": "2100396",
@@ -369,7 +361,6 @@
       "receiptMint": "EX6m7fbWciroeUeMd2N7FhMJf3jiFTxCfc3RrSYFSdVF",
       "marketAuthority": "7Z8DfocKhjunst4vLHo3WDfe8STi6fKa2VxW8Eow3koP",
       "oracleAccounts": [
-        "nu11111111111111111111111111111111111111111",
         "62V3meUaW7v53p727DnfvmBQuTQN6mvC2fCU5t3gjB2U"
       ],
       "availableLiquidityAtomic": "100000",

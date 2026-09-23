@@ -27,7 +27,11 @@ export function decodeKaminoReserve(account: AccountObservation) {
   const available = r.u64(224);
   const net = (available << 60n) + r.u128(232) - r.u128(344) - r.u128(360) - r.u128(376);
   if (net < 0n || net >= 1n << 128n) throw new Error("Invalid net reserve liquidity");
-  const oracles = [r.key(5112), r.key(5160), r.key(5192), r.key(5224)].filter(key => key !== SOLANA_IDS.system && key !== SOLANA_IDS.klend);
+  // KLend uses nu111... as a null oracle sentinel. It is a live account on
+  // devnet, but passing it to RefreshReserve fails protocol validation.
+  const nullOracle = "nu11111111111111111111111111111111111111111";
+  const oracles = [r.key(5112), r.key(5160), r.key(5192), r.key(5224)]
+    .filter(key => key !== SOLANA_IDS.system && key !== SOLANA_IDS.klend && key !== nullOracle);
   return {
     address: account.address, market: r.key(32), mint: r.key(128), liquiditySupply: r.key(160),
     tokenProgram: r.key(408), decimals: r.u64(272).toString(), receiptMint: r.key(2560),

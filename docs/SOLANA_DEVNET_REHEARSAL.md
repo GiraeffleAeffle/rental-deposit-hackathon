@@ -1,41 +1,44 @@
 # Solana devnet rehearsal
 
-This is the operator handoff for a **test-token** rehearsal, dated 23 September 2026. It does not authorize mainnet writes or claim a deployed escrow, earned yield, or an issuer-backed investment fill. The [native API guide](../app/api/finance/solana/README.md) defines the required manifest and acceptance checks.
+This is the 23 September 2026 **test-token, operator-key** proof. It establishes a deployed escrow and one complete no-claim custody cycle against a real Kamino devnet reserve. It does not establish the Privy application journey, earned yield, a tokenized-stock purchase, or production readiness. See the [deployment](evidence/SOLANA_DEVNET_DEPLOYMENT_2026-09-23.json) and [finalized transaction evidence](evidence/SOLANA_DEVNET_ESCROW_REHEARSAL_2026-09-23.json).
 
-## What is ready
+## Verified deployment
 
-- Program ID: `BiwaGavQUsSsg48UPpRAGWoXSiUnzgvdDs7rd8WizvPD`. The reviewed `test-deployment` SBF is 396,536 bytes, SHA-256 `a883a31c32d393c1869c93cbae733536233e98533cf8d56ecfa311c562f7d577`. The Rust program source has not changed since commit `0a5ad7d9ea09d9a13a493b3857e0a411467fbc9e`.
-- On the original operator machine, `.testnet-secrets/solana/rental_escrow-keypair.json` and `.testnet-secrets/solana/rental_escrow.so` match that ID/hash. A separate devnet-only deployer key is at `.testnet-secrets/solana/deployer-keypair.json` (public address `JCgJEV37VwWxzd2JqzFNaC847hrtPjQq9TU6c6HHxQao`). These files are ignored by Git; never commit, paste or reuse their private bytes on mainnet.
-- The official Agave 4.2.2 macOS ARM CLI was downloaded to `/private/tmp/solana-release/bin/` and its release archive SHA-256 checked against the [Anza release](https://github.com/anza-xyz/agave/releases/tag/v4.2.2). This temporary CLI is not part of the repository. `solana --url devnet genesis-hash` returned the pinned `EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG`.
-- The [read-only reserve probe](../scripts/probe-solana-devnet.mjs) found 21 KLend accounts for Circle test USDC, 17 passing the app's account-state checks. The recent `HRwMj8uuoGVWCanKzKvpTWN5ZvXjtjKGxcFbn2qTPKMW` candidate had about 224 test USDC available in the [snapshot](evidence/SOLANA_DEVNET_RESERVES_2026-09-23.json). [Third-party finalized receipts](evidence/SOLANA_DEVNET_RECEIPTS_2026-09-23.json) show batch refresh and receipt redemption involving it. They do not prove this escrow's exact CPI path.
+- Genesis: `EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG` (devnet). Program: `BiwaGavQUsSsg48UPpRAGWoXSiUnzgvdDs7rd8WizvPD`; ProgramData: `vTpKFXjSPtkVmLKHKAJZK6jzaS2PC7tc6pvVXtVUJ5V`.
+- The current `test-deployment` SBF is **397,336 bytes**, SHA-256 `03193455b06f9ee8c6f96ff5504f5fb97fb3ed839164676e3e9afcec55ca4377`. The dedicated upgrade authority is `JCgJEV37VwWxzd2JqzFNaC847hrtPjQq9TU6c6HHxQao`. The upgrade finalized at slot `502957809` ([signature](https://explorer.solana.com/tx/2YX6cLE6WSmsuLVwt6j3dPy9QRcGZyiv4oHvQiqgeFoBs61iRM5UaXMV3UXZWVPmhXD9nyP2omP8MkyZ2FPDYvYy?cluster=devnet)). The app's `verifyDeployedProgram` checked the finalized loader, authority, exact executable bytes/hash and zero padding after the upgrade.
+- An initial 396,536-byte build was deployed at slot `502952030`. Its supply simulation exposed a real integration defect: the pinned Kamino interface forwarded `nu111...`, KLend's absent-oracle sentinel, as a configured Switchboard account. KLend rejected `RefreshReserve` with `InvalidSwitchboardAccount`; **no supply transaction was sent from that build**. The current source omits that sentinel for the optional refresh accounts and the off-chain reserve manifest. Nine Rust host tests, three LiteSVM execution tests and 32 Solana client/service tests passed after the fix.
+- The selected Circle test-USDC mint is `4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU`; the KLend reserve is `HRwMj8uuoGVWCanKzKvpTWN5ZvXjtjKGxcFbn2qTPKMW`. Its market, vault, receipt mint, authority and one real Scope oracle are pinned in the deployment evidence. The [fresh read-only probe](evidence/SOLANA_DEVNET_RESERVES_2026-09-23.json) still found 21 test-USDC reserves, 17 passing the account checks. Reserve state can change, so the script revalidates it before every action.
 
-## Current stop and test budget
+The user supplied 10 devnet SOL to the dedicated deployer. Circle's [test faucet](https://faucet.circle.com/) sent 20 test USDC to the separate operator tenant, and the transfer finalized. Operator tenant, landlord and arbitrator keys live only in ignored, mode-0600 local files; they are **not** the user's Privy wallets. The original and upgraded `.so` files are likewise preserved only under `.testnet-secrets/solana/` on the operator machine. The official Agave 4.2.2 CLI was verified against the [Anza release](https://github.com/anza-xyz/agave/releases/tag/v4.2.2) and used for deployment. The public RPC rate-limited RPC-only upload; the successful uploads used a persistent local buffer key and the TPU client.
 
-The deployer has **0 devnet SOL**. Public CLI airdrop requests for 2 and 1 test SOL both failed with a faucet rate-limit error. The program ID remains undeployed. No app transaction was sent.
+## Finalized custody cycle
 
-At the observed devnet rent schedule, the program account, 396,581-byte ProgramData, one 483-byte tenancy and two 165-byte token accounts total **2.0221956 test SOL** in rent exemption. Deployment transaction fees, buffer behavior, user payout accounts and fee sponsorship add to this. Fund the dedicated deployer with about **3 devnet test SOL** before attempting deployment; recheck the live rent figures and balance first. The [Solana devnet faucet](https://faucet.solana.com/) provides test SOL, and the [Solana CLI reference](https://solana.com/docs/references/solana-cli) documents the programmatic airdrop. Devnet tokens have no real-world value and devnet may reset.
+The operator tenancy `BJ4xahTU26gmKE843Go9VU2segQjZTdyTEXHRfXX1wdW` fixed distinct tenant and landlord signers, a separate payer, a 10-test-USDC security requirement, and their fixed payout accounts. Every action was simulated against the current deployment before being sent. The [receipt file](evidence/SOLANA_DEVNET_ESCROW_REHEARSAL_2026-09-23.json) includes each finalized signature, slot, fee, compute use and native/KLend instruction log.
 
-For the first funding exercise, use **10 test USDC**, not the UI's fictional 3,000-unit illustration. [Circle's public faucet](https://faucet.circle.com/) currently offers 20 test USDC per Solana devnet address every two hours. Confirm the received token mint is `4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU`; a faucet transfer alone does not establish a supported lending or investment flow.
+| Step | Onchain result |
+| --- | --- |
+| Initialize and fund | Tenant and landlord jointly signed initialization; tenant deposited exactly 10 test USDC. |
+| Supply | `RefreshReserve` and `DepositReserveLiquidity` succeeded through this escrow's CPI; it held 10 million receipt units. |
+| Redeem | `RefreshReserve` and `RedeemReserveCollateral` returned 10 test USDC to escrow cash. |
+| Close | Landlord proposed a **zero** claim, tenant accepted it, and settlement returned all 10 test USDC to the tenant. |
 
-## Once the deployer is funded
+At finalized slot `502959454`, the escrow was `closed`, nonce `6`, with **zero tracked and actual cash and receipt balances**. The tenant test token account held its original 20 USDC; the landlord account held zero. The seven custody transactions incurred 75,000 test lamports in transaction fees, excluding program and account rent. There was no organic yield, surplus release, disputed claim or investment order.
 
-Use the local CLI path below on the original operator machine, or install a verified Solana CLI elsewhere. Every command explicitly selects devnet and the dedicated test signer:
+## Rehearsal command and next connected proof
+
+The [operator script](../scripts/rehearse-solana-devnet.mjs) defaults to simulation. It pins devnet genesis, exact program code hash and authority, reserve and token-account identities; signs only with the ignored local test keys; stores any sent transaction bytes locally before broadcast; and refuses a new action while its prior signature is unresolved. `--send` is required to broadcast. On the original operator machine, the sequence was:
 
 ```sh
-SOLANA_CLI=/private/tmp/solana-release/bin/solana
-TEST_DEPLOYER=.testnet-secrets/solana/deployer-keypair.json
-TEST_PROGRAM_KEY=.testnet-secrets/solana/rental_escrow-keypair.json
-TEST_PROGRAM_SO=.testnet-secrets/solana/rental_escrow.so
-
-"$SOLANA_CLI" --url devnet genesis-hash
-"$SOLANA_CLI" --url devnet balance JCgJEV37VwWxzd2JqzFNaC847hrtPjQq9TU6c6HHxQao
-shasum -a 256 "$TEST_PROGRAM_SO"
-"$SOLANA_CLI" --url devnet --keypair "$TEST_DEPLOYER" program deploy \
-  --program-id "$TEST_PROGRAM_KEY" --use-rpc "$TEST_PROGRAM_SO"
-"$SOLANA_CLI" --url devnet --keypair "$TEST_DEPLOYER" program show \
-  BiwaGavQUsSsg48UPpRAGWoXSiUnzgvdDs7rd8WizvPD
+node --experimental-strip-types scripts/rehearse-solana-devnet.mjs initialize --send
+node --experimental-strip-types scripts/rehearse-solana-devnet.mjs fund --send
+node --experimental-strip-types scripts/rehearse-solana-devnet.mjs supply --send
+node --experimental-strip-types scripts/rehearse-solana-devnet.mjs redeem --send
+node --experimental-strip-types scripts/rehearse-solana-devnet.mjs propose_no_claim --send
+node --experimental-strip-types scripts/rehearse-solana-devnet.mjs accept_no_claim --send
+node --experimental-strip-types scripts/rehearse-solana-devnet.mjs settle --send
+node --experimental-strip-types scripts/rehearse-solana-devnet.mjs status
 ```
 
-Before any app operation, record the finalized Program/ProgramData accounts, exact executable length/hash and upgrade authority. Re-run the native SVM proof if the built artifact, reserve interface or program source changes. A successful deploy alone is not a functioning tenancy.
+The recorded operator tenancy is closed; these commands do not create another one from the same local state. The script is pinned to the public addresses in its deployment evidence, so another operator must review and replace those addresses and provide their own matching ignored test keypairs before using it. `SOLANA_TEST_KEYS_DIR` selects that local key directory. Never commit keypairs, signed pending transactions or server secrets.
 
-Then create distinct tenant, landlord and arbitrator Privy accounts, record original wallets and recovery proofs, and accept a single agreement with both tenant and landlord. Precreate their fixed Circle test-USDC token accounts. The existing `buildInitializeEscrow` function requires **tenant and landlord signatures on the same transaction message**, plus a separate rent payer; there is no unattended initialization coordinator. Initialize only a reviewed candidate reserve, then read back its tenancy PDA and set the server-only manifest. Rehearse 10-test-USDC funding, supply and redemption first; only after that test the policy-bounded earnings release and claim/settlement paths. Devnet may not produce useful organic earnings during a hackathon rehearsal, so keep the controlled-accrual SVM proof clearly separate. The issuer xStock route remains unavailable on devnet.
+For the **application** proof, create separate Privy tenant, landlord and arbitrator accounts and accept one real app agreement with the actual original wallet identities. Each party must review the same initialization message; tenant and landlord must sign it, while a distinct payer funds rent. Initialize a **new** tenancy whose policy hash equals that accepted agreement digest, read it back, then configure `SOLANA_DEPLOYMENT_MANIFEST` with the pinned deployment fields plus the new `agreementId` and `tenancyAddress`. Only then test Privy signing, sponsorship, durable reconciliation, funding, lending, earnings eligibility and claim/settlement from the browser. The operator-key tenancy cannot stand in for this identity proof. The issuer xStock route is not available on this devnet proof; personal buy/sell, eligibility and cash exit remain separate gates.
