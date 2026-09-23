@@ -8,6 +8,7 @@ import type { IdentitySnapshot } from '@/server/recovery';
 import { ConnectedAgreements } from './connected-agreements';
 import { NativeRobinhood } from './native-robinhood';
 import { NativeSolana } from './native-solana';
+import { SolanaInitializationPanel } from './solana-initialization';
 import { MarketPrices } from './market-prices';
 
 type Status = ReturnType<typeof connectionStatus> & { storeAvailable: boolean };
@@ -318,6 +319,7 @@ function AccountConnections() {
         <>
           <ConnectedAgreements request={authorized} />
           <NativeRobinhood request={authorized} />
+          <SolanaInitializationPanel request={authorized} />
           <NativeSolana request={authorized} />
         </>
       )}

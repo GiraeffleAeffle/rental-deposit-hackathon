@@ -721,12 +721,10 @@ export function createSolanaService(dependencies: Dependencies) {
   };
 }
 
-export async function configuredSolanaService(
-  store: Store,
+export async function configuredFeeSponsor(
   environment: Record<string, string | undefined> = process.env,
-) {
-  const config = solanaConfiguration(environment);
-  if (!config || !environment.SOLANA_SPONSOR_KEYPAIR) return null;
+): Promise<FeeSponsor | null> {
+  if (!environment.SOLANA_SPONSOR_KEYPAIR) return null;
   const parsed: unknown = JSON.parse(environment.SOLANA_SPONSOR_KEYPAIR);
   if (
     !Array.isArray(parsed) ||
@@ -735,7 +733,7 @@ export async function configuredSolanaService(
   )
     throw new Error('Invalid sponsor keypair configuration');
   const signer = await createKeyPairSignerFromBytes(new Uint8Array(parsed));
-  const sponsor: FeeSponsor = {
+  return {
     address: signer.address,
     sign: async (bytes) =>
       new Uint8Array(
@@ -744,6 +742,14 @@ export async function configuredSolanaService(
         ),
       ),
   };
+}
+export async function configuredSolanaService(
+  store: Store,
+  environment: Record<string, string | undefined> = process.env,
+) {
+  const config = solanaConfiguration(environment);
+  const sponsor = await configuredFeeSponsor(environment);
+  if (!config || !sponsor) return null;
   return createSolanaService({ store, config, gateway: new RpcSolanaGateway(config), sponsor });
 }
 export async function reconcileSolanaOperations(
