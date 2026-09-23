@@ -668,6 +668,7 @@ test('RPC simulation applies sponsor rent debit and fee together and refuses cha
     const op = await f.service.prepare(f.identity, 'request_0001', { kind: 'fund' });
     const payer = f.sponsor.address;
     let bank = 50;
+    let simulatedSlots: number[] = [];
     let rentDebit = 100000;
     const fetcher = (async (_url: unknown, options?: RequestInit) => {
       const body = JSON.parse(String(options?.body));
@@ -684,7 +685,7 @@ test('RPC simulation applies sponsor rent debit and fee together and refuses cha
         };
       else if (body.method === 'simulateTransaction')
         result = {
-          context: { slot: bank },
+          context: { slot: simulatedSlots.shift() ?? bank },
           value: {
             err: null,
             accounts: body.params[1].accounts.addresses.map((key: string) => ({
@@ -709,6 +710,13 @@ test('RPC simulation applies sponsor rent debit and fee together and refuses cha
     );
     bank = 51;
     await assert.rejects(gateway.simulate(bytes, payer, f.tenant.address), /bank changed/);
+    bank = 50;
+    simulatedSlots = [51, 50];
+    assert.equal(
+      (await gateway.simulate(bytes, payer, f.tenant.address)).sponsorDebitCeilingLamports,
+      '10000',
+    );
+    assert.deepEqual(simulatedSlots, []);
   } finally {
     await f.store.close();
   }

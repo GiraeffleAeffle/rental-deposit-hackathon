@@ -37,6 +37,8 @@ export function SolanaInitializationPanel({
   const initialization = setup?.initialization;
   const role = setup?.role;
   const signed = Boolean(role && initialization?.signedRoles.includes(role as 'tenant' | 'landlord'));
+  const signingWallet = wallet.wallets.find((item) => item.id === setup?.walletId);
+  const walletConnected = signingWallet?.chainType === 'solana' && signingWallet.connected;
   const awaitingSignature =
     initialization?.state === 'prepared' &&
     role !== 'arbitrator' &&
@@ -67,6 +69,8 @@ export function SolanaInitializationPanel({
   async function sign() {
     if (!initialization || !setup?.walletChain || !awaitingSignature)
       throw new Error('Refresh the current initialization before signing.');
+    if (!walletConnected)
+      throw new Error('This Solana wallet is linked but not connected in this browser. Use a browser where Wallet and control details says Ready to request your signature.');
     if (Date.parse(initialization.expiresAt) <= Date.now())
       throw new Error('The signing window expired. Prepare a fresh one with both parties ready.');
     const transaction = Uint8Array.from(atob(initialization.transactionBase64), (item) =>
@@ -109,7 +113,7 @@ export function SolanaInitializationPanel({
       <button className="button secondary" disabled={busy || !wallet.ready} onClick={() => run(refresh)}>
         <RefreshCw size={16} /> Read setup
       </button>
-      {message && <p className="note" role="status">{message}</p>}
+      {!setup && message && <p className="note" role="status">{message}</p>}
       {setup && (
         <>
           <dl className="detail-list">
@@ -144,6 +148,12 @@ export function SolanaInitializationPanel({
                 )}
               </dl>
               {initialization.lastError && <p className="note">{initialization.lastError}</p>}
+              {initialization.state === 'prepared' && initialization.signedRoles.length === 2 && !initialization.signature && (
+                <p className="note" role="status">
+                  Both wallet signatures were recorded, but no transaction was submitted. If this
+                  signing window has expired, prepare a fresh one and both parties must sign again.
+                </p>
+              )}
             </>
           )}
           <div className="button-row">
@@ -158,7 +168,7 @@ export function SolanaInitializationPanel({
                 </button>
               )}
             {awaitingSignature && (
-              <button className="button primary" disabled={busy} onClick={() => run(sign)}>
+              <button className="button primary" disabled={busy || !walletConnected} onClick={() => run(sign)}>
                 <ShieldCheck size={16} /> Review and sign setup
               </button>
             )}
@@ -181,6 +191,13 @@ export function SolanaInitializationPanel({
               </button>
             )}
           </div>
+          {awaitingSignature && !walletConnected && (
+            <p className="note" role="status">
+              This Solana wallet is linked but not connected in this browser. Open this agreement in a
+              browser where Wallet and control details says Ready to request your signature.
+            </p>
+          )}
+          {message && <p className="note" role="status">{message}</p>}
           {initialization?.state === 'finalized' && (
             <p className="note">
               The initialized tenancy matches the accepted agreement. Read the connected escrow below

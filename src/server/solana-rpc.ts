@@ -362,62 +362,70 @@ export class RpcSolanaGateway implements SolanaGateway {
         ? index < message.header.numSignerAccounts - message.header.numReadonlySignerAccounts
         : index < message.staticAccounts.length - message.header.numReadonlyNonSignerAccounts,
     );
-    const before = await this.multiple(keys);
-    const result = object(
-      await this.rpc('simulateTransaction', [
-        Buffer.from(transactionBytes).toString('base64'),
-        {
-          encoding: 'base64',
-          sigVerify: false,
-          replaceRecentBlockhash: false,
-          commitment: 'finalized',
-          accounts: { encoding: 'base64', addresses: keys },
-        },
-      ]),
-    );
-    const value = object(result.value);
-    if (
-      value.err !== null ||
-      !Array.isArray(value.accounts) ||
-      value.accounts.length !== keys.length
-    )
-      throw new Error('Exact transaction simulation failed');
-    const slot = numeric(object(result.context).slot);
-    if (slot !== before.slot) throw new Error('Simulation bank changed; request a fresh review');
-    const payerIndex = keys.indexOf(address(sponsor));
-    const pre = before.accounts[payerIndex],
-      post =
-        value.accounts[payerIndex] === null ? null : account(sponsor, value.accounts[payerIndex]);
-    if (!pre || !post) throw new Error('Sponsor simulation unavailable');
-    const debit =
-      atomic(pre.lamports) > atomic(post.lamports)
-        ? atomic(pre.lamports) - atomic(post.lamports)
-        : 0n;
-    const actorIndex = keys.indexOf(address(actor));
-    if (actorIndex >= 0) {
-      const original = before.accounts[actorIndex];
-      const final =
-        value.accounts[actorIndex] === null ? null : account(actor, value.accounts[actorIndex]);
-      if (original && (!final || atomic(final.lamports) < atomic(original.lamports)))
-        throw new Error('The user would pay native fees');
+    // Two finalized RPC reads can straddle a slot boundary. Never compare
+    // balances from different banks; retry the same exact transaction instead.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const before = await this.multiple(keys);
+      const result = object(
+        await this.rpc('simulateTransaction', [
+          Buffer.from(transactionBytes).toString('base64'),
+          {
+            encoding: 'base64',
+            sigVerify: false,
+            replaceRecentBlockhash: false,
+            commitment: 'finalized',
+            accounts: { encoding: 'base64', addresses: keys },
+          },
+        ]),
+      );
+      const value = object(result.value);
+      if (
+        value.err !== null ||
+        !Array.isArray(value.accounts) ||
+        value.accounts.length !== keys.length
+      )
+        throw new Error('Exact transaction simulation failed');
+      const slot = numeric(object(result.context).slot);
+      if (slot !== before.slot) {
+        if (attempt < 2) continue;
+        throw new Error('Simulation bank changed; request a fresh review');
+      }
+      const payerIndex = keys.indexOf(address(sponsor));
+      const pre = before.accounts[payerIndex],
+        post =
+          value.accounts[payerIndex] === null ? null : account(sponsor, value.accounts[payerIndex]);
+      if (!pre || !post) throw new Error('Sponsor simulation unavailable');
+      const debit =
+        atomic(pre.lamports) > atomic(post.lamports)
+          ? atomic(pre.lamports) - atomic(post.lamports)
+          : 0n;
+      const actorIndex = keys.indexOf(address(actor));
+      if (actorIndex >= 0) {
+        const original = before.accounts[actorIndex];
+        const final =
+          value.accounts[actorIndex] === null ? null : account(actor, value.accounts[actorIndex]);
+        if (original && (!final || atomic(final.lamports) < atomic(original.lamports)))
+          throw new Error('The user would pay native fees');
+      }
+      const feeResult = object(
+        await this.rpc('getFeeForMessage', [
+          Buffer.from(decoded.messageBytes).toString('base64'),
+          { commitment: 'finalized' },
+        ]),
+      );
+      if (feeResult.value === null) throw new Error('Transaction fee unavailable');
+      const fee = atomic(numeric(feeResult.value));
+      // Deliberately conservative: includes fee even when the simulation already deducted it.
+      const ceiling = debit + fee;
+      if (ceiling > atomic(this.config.maximumSponsorLamports))
+        throw new Error('Sponsor fee and rent ceiling exceeded');
+      return {
+        slot,
+        sponsorDebitCeilingLamports: ceiling.toString(),
+        networkFeeLamports: fee.toString(),
+      };
     }
-    const feeResult = object(
-      await this.rpc('getFeeForMessage', [
-        Buffer.from(decoded.messageBytes).toString('base64'),
-        { commitment: 'finalized' },
-      ]),
-    );
-    if (feeResult.value === null) throw new Error('Transaction fee unavailable');
-    const fee = atomic(numeric(feeResult.value));
-    // Deliberately conservative: includes fee even when the simulation already deducted it.
-    const ceiling = debit + fee;
-    if (ceiling > atomic(this.config.maximumSponsorLamports))
-      throw new Error('Sponsor fee and rent ceiling exceeded');
-    return {
-      slot,
-      sponsorDebitCeilingLamports: ceiling.toString(),
-      networkFeeLamports: fee.toString(),
-    };
+    throw new Error('Simulation bank changed; request a fresh review');
   }
   async broadcast(transactionBytes: Uint8Array) {
     await this.checkedGenesis();
