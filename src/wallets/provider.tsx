@@ -22,6 +22,7 @@ import {
   useWallets as useSolanaWallets,
 } from '@privy-io/react-auth/solana';
 import { createSolanaRpc, createSolanaRpcSubscriptions } from '@solana/kit';
+import { StyleSheetManager } from 'styled-components';
 import { defineChain } from 'viem';
 import {
   assertUnchangedSolanaMessage,
@@ -106,38 +107,43 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     return <WalletContext.Provider value={inactiveAccess}>{children}</WalletContext.Provider>;
 
   return (
-    <PrivyProvider
-      appId={appId}
-      config={{
-        loginMethods: ['email', 'passkey'],
-        appearance: {
-          theme: 'light',
-          accentColor: '#245B4A',
-          walletChainType: 'ethereum-and-solana',
-        },
-        defaultChain: robinhoodTestnet,
-        supportedChains: [robinhoodTestnet, robinhood],
-        embeddedWallets: {
-          ethereum: { createOnLogin: 'off' },
-          solana: { createOnLogin: 'off' },
-          showWalletUIs: true,
-        },
-        solana: {
-          rpcs: {
-            'solana:mainnet': {
-              rpc: createSolanaRpc('https://api.mainnet-beta.solana.com'),
-              rpcSubscriptions: createSolanaRpcSubscriptions('wss://api.mainnet-beta.solana.com'),
-            },
-            'solana:devnet': {
-              rpc: createSolanaRpc('https://api.devnet.solana.com'),
-              rpcSubscriptions: createSolanaRpcSubscriptions('wss://api.devnet.solana.com'),
+    <StyleSheetManager
+      // Privy 3.45.0 passes its email modal's `stacked` layout prop to a styled label.
+      shouldForwardProp={(prop, target) => !(prop === 'stacked' && typeof target === 'string')}
+    >
+      <PrivyProvider
+        appId={appId}
+        config={{
+          loginMethods: ['email', 'passkey'],
+          appearance: {
+            theme: 'light',
+            accentColor: '#245B4A',
+            walletChainType: 'ethereum-and-solana',
+          },
+          defaultChain: robinhoodTestnet,
+          supportedChains: [robinhoodTestnet, robinhood],
+          embeddedWallets: {
+            ethereum: { createOnLogin: 'off' },
+            solana: { createOnLogin: 'off' },
+            showWalletUIs: true,
+          },
+          solana: {
+            rpcs: {
+              'solana:mainnet': {
+                rpc: createSolanaRpc('https://api.mainnet-beta.solana.com'),
+                rpcSubscriptions: createSolanaRpcSubscriptions('wss://api.mainnet-beta.solana.com'),
+              },
+              'solana:devnet': {
+                rpc: createSolanaRpc('https://api.devnet.solana.com'),
+                rpcSubscriptions: createSolanaRpcSubscriptions('wss://api.devnet.solana.com'),
+              },
             },
           },
-        },
-      }}
-    >
-      <ActiveWalletAccess>{children}</ActiveWalletAccess>
-    </PrivyProvider>
+        }}
+      >
+        <ActiveWalletAccess>{children}</ActiveWalletAccess>
+      </PrivyProvider>
+    </StyleSheetManager>
   );
 }
 
