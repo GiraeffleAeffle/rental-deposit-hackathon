@@ -1,6 +1,6 @@
 # Passkeys and personal wallet setup
 
-Updated 22 September 2026. The SDK integration and development-dashboard configuration exist; a server secret in this checkout, real passkeys, same-wallet recovery and sponsored transactions have not yet been proved.
+Updated 23 September 2026. The SDK integration and development-dashboard configuration exist. Local server-credential authentication and a Jupiter price read have passed; real passkeys, same-wallet recovery and sponsored transactions have not yet been proved.
 
 ## What is implemented
 
@@ -21,14 +21,14 @@ The module never calls server wallet-signing endpoints, attaches session signers
 
 ## Provider activation
 
-The user signed in and created the `hackathon` development app. Email and passkey login are enabled. `http://127.0.0.1:4175` is its allowed local origin. The wallet environment reports TEE enabled; smart wallets and additional authorization keys remain off. The public app ID is set in this checkout's ignored `.env.local`. A server secret exists in the dashboard, but Privy does not show its full value again and this checkout has no `PRIVY_APP_SECRET`. An existing saved secret or a separately authorized new secret is needed before server identity verification can work. No live passkey signup or original-wallet recovery has been rehearsed.
+The user signed in and created the `hackathon` development app. Email and passkey login are enabled. `http://127.0.0.1:4175` is its allowed local origin. The wallet environment reports TEE enabled; smart wallets and additional authorization keys remain off. The public app ID and a new server secret are set in the user's ignored local `.env.local`. A read-only `client.users().list({limit: 1})` request authenticated and returned zero users. This checks the credential, not the full identity flow. No live passkey signup or original-wallet recovery has been rehearsed. No secret is in the repository; a clean checkout needs its own secure configuration.
 
 Remaining setup:
 
 1. Use the existing development app and preserve the technical repository name while the brand is undecided. A production plan has not been activated.
 2. Add the exact stable HTTPS preview origin before testing passkeys there. Confirm relying-party/domain behavior on a real device; a credential enrolled at the local origin may not work on a different hostname.
 3. Keep user-owned embedded Ethereum and Solana wallets with TEE, without server/session/additional signers or wallet automations. The application explicitly requests each missing wallet after passkey and backup-email setup.
-4. Supply an existing saved app secret to `PRIVY_APP_SECRET` in ignored local or deployment configuration. If it was not saved, handle replacement explicitly; do not treat the masked dashboard entry as a usable secret. Never put a server secret in a `NEXT_PUBLIC_` variable, public repository, URL or screenshot.
+4. Set `PRIVY_APP_SECRET` in each additional development or deployment environment. Never put a server secret in a `NEXT_PUBLIC_` variable, public repository, URL or screenshot.
 5. Restart local development or rebuild a deployment after configuration changes. Prove real passkey access and original-wallet recovery before connected finance.
 
 ```dotenv
@@ -42,7 +42,7 @@ The SDK currently uses public Robinhood and Solana RPCs for wallet connection/si
 
 ## Trading provider handoff
 
-The user signed in to Jupiter and created an organization. A project team named `rental-deposit-dev` and one API key restricted to `/swap/v2/order` exist. Its full one-time value was not retained in this checkout, so `JUPITER_API_KEY` remains unset; arrange a saved key or a replacement before transaction builds. No 0x account or RWA grant is configured. The provider links and access conditions below were checked on 22 September 2026.
+The user signed in to Jupiter and created an organization and project team named `rental-deposit-dev`. A replacement API key is set as `JUPITER_API_KEY` in the user's ignored local configuration. Its portal permissions were narrowed to `/swap/v2/order` alone and verified after reload. Price-only requests through the app succeeded with that key; they did not request transactions or prove an executable trade. No 0x account or RWA grant is configured. The provider links and access conditions below were checked on 22 September 2026.
 
 Jupiter's current account entry point is [Developer Portal](https://developers.jup.ag/portal). The current Free plan is $0 with one request per second. Keep any usable key as server-only `JUPITER_API_KEY`; the current app uses `/swap/v2/order`. Jupiter also documents keyless requests at 0.5 requests per second, which support the existing limited price check. An account and indicative quote do not establish instrument eligibility or prove an order filled. [Jupiter setup](https://developers.jup.ag/docs/portal/setup), [pricing](https://developers.jup.ag/pricing).
 
