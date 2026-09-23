@@ -238,6 +238,7 @@ export function Workspace() {
           </div>
           <button
             className={`nav-item ${view === 'connections' ? 'selected' : ''}`}
+            aria-current={view === 'connections' ? 'page' : undefined}
             onClick={() => navigate('connections')}
           >
             <Link2 size={18} />
@@ -753,6 +754,14 @@ export function Workspace() {
               </span>
             </button>
           ))}
+          <button
+            aria-current={view === 'connections' ? 'page' : undefined}
+            aria-label="Account and connections"
+            onClick={() => navigate('connections')}
+          >
+            <Link2 size={19} />
+            <span>Account</span>
+          </button>
         </nav>
       </div>
       <ConfirmOperation

@@ -2616,12 +2616,13 @@ dd {
     display: flex;
     flex-direction: column;
     align-items: center;
+    flex: 1;
     gap: 4px;
     min-height: 45px;
-    min-width: 65px;
+    min-width: 0;
     color: #8c9980;
     font-size: 9px;
-    padding: 4px 8px;
+    padding: 4px 2px;
     border-radius: 7px;
   }
   .mobile-nav button[aria-current='page'] {
