@@ -218,7 +218,8 @@ function ActiveWalletAccess({ children }: { children: ReactNode }) {
 
   const value: RentalWalletAccess = {
     configured: true,
-    ready: ready && (!authenticated || (evm.ready && solana.ready)),
+    // Account setup must remain available before either wallet connector exists.
+    ready,
     authenticated,
     subject: authenticated ? (user?.id ?? null) : null,
     wallets,
