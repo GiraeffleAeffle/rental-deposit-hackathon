@@ -2,12 +2,12 @@
 
 This prototype has a real Anchor program and a restricted Kamino supply/redemption CPI path. The original explicit `test-deployment` build is **deployed on devnet** and completed an [operator-key, test-token custody rehearsal](../../docs/SOLANA_DEVNET_REHEARSAL.md); a separate Privy-connected tenancy has finalized funding and supply. Default builds reject initialization; `test-deployment` permits only Circle's devnet test USDC mint and deposits up to 10,000 test units. There is no mainnet-write feature.
 
-The existing devnet program ID is `BiwaGavQUsSsg48UPpRAGWoXSiUnzgvdDs7rd8WizvPD`. `Anchor.toml` selects localnet. On the original operator machine, the matching test program keypair and reviewed `.so` are preserved in the ignored `.testnet-secrets/solana/` directory; neither is committed or supplied to other checkouts. The keypair file is mode 0600. The client requires an explicit deployment manifest, genesis hash and reviewed program hash before it can plan test-network writes. The new `initialize_staged` source is **not** part of that deployed binary; it needs a separately built, tested and deployed program ID before use.
+The original joint-signature devnet program is `BiwaGavQUsSsg48UPpRAGWoXSiUnzgvdDs7rd8WizvPD`; its funded tenancy remains there. The staged source declares the distinct program ID `B1hjmapwssey8AbpjAtw5qF87DvvtuSisGov4kHec7Yc`. `Anchor.toml` selects localnet. On the original operator machine, the matching test program keypairs and reviewed `.so` are preserved in the ignored `.testnet-secrets/solana/` directory; none are committed or supplied to other checkouts. The keypair files are mode 0600. The client requires an explicit deployment manifest, genesis hash and reviewed program hash before it can plan test-network writes. The new program is **not yet deployed**; SBF compilation and local SVM execution must pass for this exact ID first.
 
 | Action | Authority and result |
 | --- | --- |
 | Initialize | Tenant and landlord both sign the fixed parties, payout accounts, reserve, principal, release flag and policy hash. A separate payer funds account rent. |
-| Initialize staged (new source only) | The landlord signs creation of an empty escrow after off-chain agreement acceptance. Tenant is fixed as a non-signer and must later sign `fund`; the separate payer covers rent. Not deployed or SVM-proven yet. |
+| Initialize staged (new source only) | The landlord signs creation of an empty escrow after off-chain agreement acceptance. Tenant is fixed as a non-signer and must later sign `fund`; the separate payer covers rent. Not deployed yet. |
 | Fund | Tenant transfers the exact required test USDC principal to the cash PDA. |
 | Supply | Tenant authorizes an input cap. The program refreshes the reserve and supplies cash through KLend. Observed cash spent and receipt tokens received update the ledger. |
 | Redeem | Tenant while active; a recorded party while settling. Receipts can redeem only to escrow cash, with a minimum received amount. |
@@ -39,7 +39,7 @@ RENTAL_ESCROW_SBF=/tmp/rental-sbf/rental_escrow.so KAMINO_FIXTURE_DIR=/tmp/renta
 
 The download script uses read-only mainnet RPC calls to fetch the KLend executable, one reserve, its market, clock and configured oracle accounts. It writes program hash and snapshot slot provenance. It creates no wallet and sends no transaction. The test harness substitutes the test USDC mint and locally constructs test token accounts. A separate controlled-accrual fixture changes reserve liquidity and its matching token balance to exercise earnings release. These tests prove execution against a real protocol binary in a local SVM with test state; they are separate from the devnet operator proof and do not prove organic earnings or issuer trading.
 
-The [SBF CI job](../../.github/workflows/solana-sbf.yml) repeats this build and local SVM proof on an isolated runner using the SHA-256-pinned Agave v4.2.2 release. Its artifact is **local proof only**: this source still declares the existing program ID. A staged devnet deployment needs a new program keypair and ID, a rebuild, and a fresh binary hash and authority review. Do not deploy the CI artifact over the existing program.
+The [SBF CI job](../../.github/workflows/solana-sbf.yml) repeats this build and local SVM proof on an isolated runner using the SHA-256-pinned Agave v4.2.2 release. A devnet deployment needs a fresh binary hash and authority review. The original program and its funded tenancy must not be upgraded as part of this staged proof.
 
 Verified through 2026-09-23:
 

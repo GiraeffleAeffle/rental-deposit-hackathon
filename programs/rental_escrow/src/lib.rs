@@ -6,7 +6,7 @@ pub mod lending;
 pub mod state;
 use state::{Phase, Tenancy};
 
-declare_id!("BiwaGavQUsSsg48UPpRAGWoXSiUnzgvdDs7rd8WizvPD");
+declare_id!("B1hjmapwssey8AbpjAtw5qF87DvvtuSisGov4kHec7Yc");
 
 pub const TEST_USDC: Pubkey = pubkey!("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
 

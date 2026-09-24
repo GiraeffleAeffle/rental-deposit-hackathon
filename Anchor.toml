@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-rental_escrow = "BiwaGavQUsSsg48UPpRAGWoXSiUnzgvdDs7rd8WizvPD"
+rental_escrow = "B1hjmapwssey8AbpjAtw5qF87DvvtuSisGov4kHec7Yc"
 
 [provider]
 cluster = "Localnet"
