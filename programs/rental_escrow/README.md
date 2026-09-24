@@ -41,12 +41,12 @@ The download script uses read-only mainnet RPC calls to fetch the KLend executab
 
 The [SBF CI job](../../.github/workflows/solana-sbf.yml) repeats this build and local SVM proof on an isolated runner using the SHA-256-pinned Agave v4.2.2 release. A devnet deployment needs a fresh binary hash and authority review. The original program and its funded tenancy must not be upgraded as part of this staged proof.
 
-Verified through 2026-09-23:
+Verified through 2026-09-24:
 
 - 9 host tests: fixed-point rounding/overflow bounds, fee buckets, policy/shortfall rules, claim authority/limits/nonces, client account-layout compatibility and null-oracle omission.
-- 3 LiteSVM integration tests using the compiled escrow and real KLend SBF: authority/claim/recipient/nonce/settlement; refresh→supply→redeem with receipt rounding, insufficient liquidity and slippage rollback; 3,000-unit funding→controlled 10-unit earnings release→120-unit claim→2,880-unit security return, preserving the previously released 10 units.
+- 4 LiteSVM integration tests using the compiled escrow and real KLend SBF: landlord-only staged setup followed by tenant funding; authority/claim/recipient/nonce/settlement; refresh→supply→redeem with receipt rounding, insufficient liquidity and slippage rollback; 3,000-unit funding→controlled 10-unit earnings release→120-unit claim→2,880-unit security return, preserving the previously released 10 units. The [staged exact-ID run](https://github.com/GiraeffleAeffle/rental-deposit-hackathon/actions/runs/35969371724) passed with a 454,752-byte SBF, SHA-256 `29b7a9877bb8dacfa170ecf13e7c112a88d6dd3355e006b79975a25baefaae41`.
 - 14 TypeScript tests and TypeScript/ESLint checks: network/asset gates, issuer extensions, binary account decoding, transaction construction, quote eligibility/expiry/fees, encoded Metis amount bounds, exact-message simulation review and finalized token-delta reconciliation.
-- SBF build: `cargo-build-sbf 4.3.0`, platform-tools `v1.57`, Anchor `0.32.1`; no container or local validator. The corrected 397,336-byte devnet artifact SHA-256 is `03193455b06f9ee8c6f96ff5504f5fb97fb3ed839164676e3e9afcec55ca4377`.
+- Original joint-program devnet build: `cargo-build-sbf 4.3.0`, platform-tools `v1.57`, Anchor `0.32.1`; no container or local validator. The corrected 397,336-byte original artifact SHA-256 is `03193455b06f9ee8c6f96ff5504f5fb97fb3ed839164676e3e9afcec55ca4377`.
 - Public KLend snapshot: slot `449444994`; executable SHA-256 `9db16dd4b7bbfe4f13df850bf880bfc4522fcece06717c0626d625746a3cc85b`. Future upgraded binaries require another proof run.
 - Devnet operator proof: finalized initialization, 10-test-USDC funding, KLend refresh/supply/redemption and zero-claim settlement. The tenant ended with 20 test USDC; escrow cash and receipts were zero. [Receipts and final state](../../docs/evidence/SOLANA_DEVNET_ESCROW_REHEARSAL_2026-09-23.json).
 

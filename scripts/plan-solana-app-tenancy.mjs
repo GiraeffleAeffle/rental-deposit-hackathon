@@ -2,6 +2,7 @@
 
 // Read-only operator plan for a real accepted Privy agreement; never uses the rehearsal parties.
 import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import { agreementDigest } from '../src/server/agreements.ts';
 import { getStore } from '../src/server/store.ts';
 import {
@@ -13,8 +14,8 @@ import { deriveEscrowAddresses } from '../src/finance/solana/program.ts';
 import { solanaConfiguration } from '../src/server/solana-rpc.ts';
 
 const agreementId = process.argv[2];
-if (process.argv.length !== 3 || !/^[a-zA-Z0-9_-]{1,160}$/.test(agreementId ?? '')) {
-  console.error('Usage: node --env-file-if-exists=.env.local --experimental-strip-types scripts/plan-solana-app-tenancy.mjs AGREEMENT_ID');
+if (![3, 4].includes(process.argv.length) || !/^[a-zA-Z0-9_-]{1,160}$/.test(agreementId ?? '')) {
+  console.error('Usage: node --env-file-if-exists=.env.local --experimental-strip-types scripts/plan-solana-app-tenancy.mjs AGREEMENT_ID [DEPLOYMENT_EVIDENCE_JSON]');
   process.exit(2);
 }
 const agreement = await (await getStore()).get(`agreement:${agreementId}`);
@@ -22,15 +23,18 @@ if (!agreement || agreement.network !== 'solana') throw new Error('A recorded So
 const digest = agreementDigest(agreement);
 if (!digest || agreement.accepted.tenant?.digest !== digest || agreement.accepted.landlord?.digest !== digest)
   throw new Error('All three people must join and tenant and landlord must accept the same digest');
-const evidence = JSON.parse(
-  await readFile(new URL('../docs/evidence/SOLANA_DEVNET_DEPLOYMENT_2026-09-23.json', import.meta.url), 'utf8'),
-);
-if (!evidence.operatorOnly || evidence.cluster !== 'devnet')
+const evidencePath = process.argv[3]
+  ? resolve(process.argv[3])
+  : new URL('../docs/evidence/SOLANA_DEVNET_DEPLOYMENT_2026-09-23.json', import.meta.url);
+const evidence = JSON.parse(await readFile(evidencePath, 'utf8'));
+if (!evidence.operatorOnly || evidence.cluster !== 'devnet' ||
+    !['joint', 'staged'].includes(evidence.setupMode ?? 'joint'))
   throw new Error('The pinned devnet deployment evidence is unavailable');
 const tenant = agreement.parties.tenant.wallet.address;
 const landlord = agreement.parties.landlord.wallet.address;
 const arbitrator = agreement.parties.arbitrator.wallet.address;
 const base = {
+  setupMode: evidence.setupMode ?? 'joint',
   cluster: 'devnet',
   genesisHash: evidence.genesisHash,
   escrowProgram: evidence.escrowProgram,
