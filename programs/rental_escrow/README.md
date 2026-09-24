@@ -1,12 +1,13 @@
 # Restricted Solana rental escrow
 
-This prototype has a real Anchor program and a restricted Kamino supply/redemption CPI path. The explicit `test-deployment` build is **deployed on devnet** and completed an [operator-key, test-token custody rehearsal](../../docs/SOLANA_DEVNET_REHEARSAL.md). Default builds reject initialization; `test-deployment` permits only Circle's devnet test USDC mint and deposits up to 10,000 test units. There is no mainnet-write feature or completed Privy application journey.
+This prototype has a real Anchor program and a restricted Kamino supply/redemption CPI path. The original explicit `test-deployment` build is **deployed on devnet** and completed an [operator-key, test-token custody rehearsal](../../docs/SOLANA_DEVNET_REHEARSAL.md); a separate Privy-connected tenancy has finalized funding and supply. Default builds reject initialization; `test-deployment` permits only Circle's devnet test USDC mint and deposits up to 10,000 test units. There is no mainnet-write feature.
 
-The test program ID is `BiwaGavQUsSsg48UPpRAGWoXSiUnzgvdDs7rd8WizvPD`. `Anchor.toml` selects localnet. On the original operator machine, the matching test program keypair and reviewed `.so` are preserved in the ignored `.testnet-secrets/solana/` directory; neither is committed or supplied to other checkouts. The keypair file is mode 0600. The client requires an explicit deployment manifest, genesis hash and reviewed program hash before it can plan test-network writes.
+The existing devnet program ID is `BiwaGavQUsSsg48UPpRAGWoXSiUnzgvdDs7rd8WizvPD`. `Anchor.toml` selects localnet. On the original operator machine, the matching test program keypair and reviewed `.so` are preserved in the ignored `.testnet-secrets/solana/` directory; neither is committed or supplied to other checkouts. The keypair file is mode 0600. The client requires an explicit deployment manifest, genesis hash and reviewed program hash before it can plan test-network writes. The new `initialize_staged` source is **not** part of that deployed binary; it needs a separately built, tested and deployed program ID before use.
 
 | Action | Authority and result |
 | --- | --- |
 | Initialize | Tenant and landlord both sign the fixed parties, payout accounts, reserve, principal, release flag and policy hash. A separate payer funds account rent. |
+| Initialize staged (new source only) | The landlord signs creation of an empty escrow after off-chain agreement acceptance. Tenant is fixed as a non-signer and must later sign `fund`; the separate payer covers rent. Not deployed or SVM-proven yet. |
 | Fund | Tenant transfers the exact required test USDC principal to the cash PDA. |
 | Supply | Tenant authorizes an input cap. The program refreshes the reserve and supplies cash through KLend. Observed cash spent and receipt tokens received update the ledger. |
 | Redeem | Tenant while active; a recorded party while settling. Receipts can redeem only to escrow cash, with a minimum received amount. |

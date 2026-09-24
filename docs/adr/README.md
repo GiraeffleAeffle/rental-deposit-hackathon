@@ -14,6 +14,7 @@ These records cover the separate rental asset-building hackathon project. They d
 | [0006](0006-solana-usdc-kamino-and-xstocks.md)                  | Proposed                             | Explore the Solana USDC → restricted Anchor escrow/Kamino → personal Jupiter/xStocks flow.                             |
 | [0007](0007-reconcile-financial-operations-in-durable-steps.md) | Accepted                             | Persist and reconcile individually confirmed financial steps, preserving partial completion and safe retries.          |
 | [0008](0008-durable-runtime-and-bounded-sponsors.md)            | Accepted for the test implementation | Persist native operations and use bounded, separately funded sponsors.                                                 |
+| [0009](0009-stage-solana-escrow-setup-and-funding.md)           | Accepted for the next test implementation | For new Solana tenancies, let the landlord prepare empty custody and the tenant fund later; preserve the deployed joint-signature program. |
 
 ## Coverage of the three implementation plans
 

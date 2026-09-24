@@ -1,8 +1,8 @@
 # Solana test escrow service
 
-These Node routes connect accepted tenancy agreements and the original recovered Privy wallets to the restricted native escrow. They support one explicitly configured tenancy on **devnet or localnet**. The initialization route can now create that tenancy from a fully accepted agreement: tenant and landlord each sign the same short-lived transaction, and the separate fee sponsor adds only its own signature after both signatures verify. The route does not deploy a program, mint funds, create payout accounts, or enable mainnet transactions. Missing configuration leaves initialization unavailable; malformed or unverifiable configuration prevents financial operations.
+These Node routes connect accepted tenancy agreements and the original recovered Privy wallets to the restricted native escrow. They support one explicitly configured tenancy on **devnet or localnet**. The deployed setup mode requires tenant and landlord to sign the same short-lived transaction. A new staged source path lets the landlord alone sign empty-escrow creation and the tenant fund later, but requires a **different verified deployment** before it can work on devnet. The separate fee sponsor adds only its own signature after the required party signatures verify. The route does not deploy a program, mint funds, create payout accounts, or enable mainnet transactions. Missing configuration leaves initialization unavailable; malformed or unverifiable configuration prevents financial operations.
 
-The native Anchor/Kamino execution proof is described in [`programs/rental_escrow/README.md`](../../../../programs/rental_escrow/README.md). A separate [operator-key devnet rehearsal](../../../../docs/SOLANA_DEVNET_REHEARSAL.md) has now deployed this program and completed a small funding → Kamino supply → redemption → no-claim settlement cycle. That operator tenancy is unrelated to the user's Privy identity and cannot enable these HTTP routes. No complete Privy → deployed devnet escrow journey has been demonstrated yet.
+The native Anchor/Kamino execution proof is described in [`programs/rental_escrow/README.md`](../../../../programs/rental_escrow/README.md). A separate [operator-key devnet rehearsal](../../../../docs/SOLANA_DEVNET_REHEARSAL.md) completed funding → Kamino supply → redemption → no-claim settlement. A Privy-connected tenancy subsequently finalized setup, funding and supply, but not redemption or settlement. The staged instruction has not been built, SVM-proved or deployed.
 
 ## Required operator configuration
 
@@ -21,6 +21,7 @@ Run `node --experimental-strip-types scripts/probe-solana-devnet.mjs` from the r
 ```json
 {
   "cluster": "devnet",
+  "setupMode": "joint",
   "genesisHash": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
   "escrowProgram": "<deployed-test-program-address>",
   "programSha256": "<64-lowercase-hex-sha256-of-built-so>",
@@ -54,7 +55,7 @@ The first two steps below were completed for the operator-key devnet rehearsal. 
 2. The reviewed binary is deployed on devnet at program `BiwaGavQUsSsg48UPpRAGWoXSiUnzgvdDs7rd8WizvPD`, upgrade slot `502957809`, with dedicated authority `JCgJEV37VwWxzd2JqzFNaC847hrtPjQq9TU6c6HHxQao`. The [deployment evidence](../../../../docs/evidence/SOLANA_DEVNET_DEPLOYMENT_2026-09-23.json) pins ProgramData and signature. The service verifies executable bytes and authority again before each operation. A future upgrade requires a new review and manifest hash.
 3. Record a complete Solana agreement in the application. Its tenant, landlord and assigned arbitrator must be the actual original wallet identities. Tenant and landlord must accept the same `agreementDigest`. Complete the existing recovery gate with both original EVM and Solana wallets in the second browser/session, plus the current passkey and backup login requirements.
 4. Precreate the tenant and landlord **associated** test-USDC payout accounts. Derive the tenancy PDA from `sha256("rental-lease-v1:solana:" + genesisHash + ":" + escrowProgram + ":" + agreementId)` and the tenant wallet. Configure that PDA and agreement ID in `SOLANA_DEPLOYMENT_MANIFEST` alongside the reviewed program and reserve fields, and set a dedicated fee sponsor. The server verifies the payout-account authorities, program bytes/upgrade authority, reserve and sponsor cost before offering a signing window.
-5. In the app, open **Initialize the Solana tenancy** and prepare the transaction. Tenant and landlord must sign the **same** message before its blockhash expires; the arbitrator observes but does not sign initialization. The server verifies each Ed25519 signature, adds only its fee signature, persists the fully signed bytes before broadcast, then verifies both the finalized receipt and the on-chain agreement binding. The accepted digest becomes the 32-byte policy hash, and funding stays a later tenant action. If one signer is too slow, prepare a fresh window and have both sign again. An ambiguous broadcast can only retry the identical persisted transaction while it remains valid; a new transaction is not silently substituted.
+5. With `setupMode: "joint"` (the default and only deployed mode), tenant and landlord must sign the **same** initialization message before its blockhash expires. The arbitrator observes but does not sign. The server verifies each Ed25519 signature, adds only its fee signature, persists the fully signed bytes before broadcast, then verifies both the finalized receipt and the on-chain agreement binding. With `setupMode: "staged"`, only the landlord signs empty-escrow creation; the tenant separately signs funding later. This source path is blocked for the old program ID and is not a deployed claim. An ambiguous broadcast can only retry the identical persisted transaction while it remains valid; a new transaction is not silently substituted.
 
 After all parties join and the two acceptances are recorded, the read-only planner prints the exact public manifest and derived payout accounts, and reports which payout accounts are missing:
 
@@ -64,7 +65,7 @@ node --env-file-if-exists=.env.local --experimental-strip-types scripts/plan-sol
 
 It reads the app's configured database and the pinned public deployment evidence. It makes no wallet or environment changes. The operator creates missing associated token accounts, stores the manifest as a server-only environment value, configures a separate test fee sponsor, and restarts the app. The planner's output is public account metadata; never add the sponsor keypair to a repository or browser environment.
 
-Until steps 3–5 are proved for an application agreement, the connected escrow remains **unavailable**. The independent operator rehearsal does not grant this server authority over its tenancy or user wallets.
+The existing joint-signature application agreement has proved setup, funding and supply. It does not prove staged setup or exit. The independent operator rehearsal does not grant this server authority over its tenancy or user wallets.
 
 ## HTTP contract
 
@@ -74,7 +75,7 @@ All endpoints require the application's verified bearer token. Writes additional
 | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GET /api/finance/solana`                           | Availability, verified party/`walletId`, `feePayer`, cluster/genesis, tenancy balances, operation history and trading availability.                                          |
 | `GET /api/finance/solana/initialize`                | Configured agreement, derived tenancy, current initialization state and the current party's wallet ID.                                                                      |
-| `POST /api/finance/solana/initialize`               | `{ "action": "prepare" | "sign" | "reconcile" | "retry" }`; `sign` also carries `signedTxBase64`. Only tenant and landlord can prepare/sign, and all writes require same origin. |
+| `POST /api/finance/solana/initialize`               | `{ "action": "prepare" | "sign" | "reconcile" | "retry" }`; `sign` also carries `signedTxBase64`. Joint mode requires tenant and landlord; staged mode requires the landlord only. All writes require same origin. |
 | `POST /api/finance/solana/operations`               | `{ "requestId": "stable_request_id", "action": { "kind": "fund" } }`; returns `{ "operation": ... }`.                                                                        |
 | `GET /api/finance/solana/operations/:id`            | The persisted operation and receipt state.                                                                                                                                   |
 | `POST /api/finance/solana/operations/:id/authorize` | `{ "signedTxBase64": "<actor-signed-transaction>" }`; returns the persisted send/unknown state.                                                                              |

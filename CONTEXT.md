@@ -21,6 +21,14 @@ _Avoid_: Administrator, portfolio manager.
 The rental relationship between identified parties, including its security obligation, agreement, evidence and settlement.
 _Avoid_: Account, wallet.
 
+**Accepted agreement**:
+The fixed tenancy terms that both tenant and landlord have accepted, including required security and the earnings release policy. Acceptance alone does not transfer or lock the tenant's money.
+_Avoid_: Funded tenancy, completed deposit.
+
+**Prepared escrow**:
+A custody arrangement bound to an accepted agreement that holds no rental security until the tenant funds it.
+_Avoid_: Active deposit, funded security.
+
 ### Rental security and earnings
 
 **Deposit principal**:

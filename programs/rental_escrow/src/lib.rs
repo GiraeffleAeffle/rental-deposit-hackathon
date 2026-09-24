@@ -15,62 +15,35 @@ pub mod rental_escrow {
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>, args: InitializeArgs) -> Result<()> {
-        require!(
-            cfg!(feature = "test-deployment"),
-            EscrowError::DeploymentDisabled
-        );
-        require_keys_eq!(
+        initialize_tenancy(
+            &mut ctx.accounts.tenancy,
+            &ctx.accounts.reserve,
+            &ctx.accounts.market,
+            ctx.accounts.tenant.key(),
+            ctx.accounts.landlord.key(),
             ctx.accounts.deposit_mint.key(),
-            TEST_USDC,
-            EscrowError::InvalidAsset
-        );
-        require!(
-            args.required_security > 0 && args.required_security <= 10_000_000_000,
-            EscrowError::InvalidAmount
-        );
-        require!(args.policy_hash != [0; 32], EscrowError::InvalidPolicy);
-        let tenant = ctx.accounts.tenant.key();
-        let landlord = ctx.accounts.landlord.key();
-        require!(
-            tenant != landlord
-                && args.arbitrator != tenant
-                && args.arbitrator != landlord
-                && args.arbitrator != Pubkey::default(),
-            EscrowError::InvalidParties
-        );
-        let t = &mut ctx.accounts.tenancy;
-        t.lease_id = args.lease_id;
-        t.tenant = tenant;
-        t.landlord = landlord;
-        t.arbitrator = args.arbitrator;
-        t.deposit_mint = ctx.accounts.deposit_mint.key();
-        t.reserve = ctx.accounts.reserve.key();
-        t.market = ctx.accounts.market.key();
-        t.receipt_mint = ctx.accounts.receipt_mint.key();
-        t.liquidity_supply = args.liquidity_supply;
-        t.market_authority = args.market_authority;
-        t.tenant_destination = ctx.accounts.tenant_destination.key();
-        t.landlord_destination = ctx.accounts.landlord_destination.key();
-        t.policy_hash = args.policy_hash;
-        t.release_permitted = args.release_permitted;
-        t.required_security = args.required_security;
-        t.accounted_idle = 0;
-        t.accounted_receipts = 0;
-        t.released_earnings = 0;
-        t.next_nonce = 0;
-        t.claim_amount = 0;
-        t.approved_claim = 0;
-        t.phase = Phase::AwaitingFunding;
-        t.bump = ctx.bumps.tenancy;
-        let snapshot = lending::inspect(&ctx.accounts.reserve, &ctx.accounts.market, t)?;
-        require!(snapshot.healthy, EscrowError::ProtocolUnavailable);
-        emit!(FinanceEvent {
-            tenancy: t.key(),
-            nonce: 0,
-            kind: EventKind::Initialized,
-            amount: args.required_security
-        });
-        Ok(())
+            ctx.accounts.receipt_mint.key(),
+            ctx.accounts.tenant_destination.key(),
+            ctx.accounts.landlord_destination.key(),
+            ctx.bumps.tenancy,
+            args,
+        )
+    }
+
+    pub fn initialize_staged(ctx: Context<InitializeStaged>, args: InitializeArgs) -> Result<()> {
+        initialize_tenancy(
+            &mut ctx.accounts.tenancy,
+            &ctx.accounts.reserve,
+            &ctx.accounts.market,
+            ctx.accounts.tenant.key(),
+            ctx.accounts.landlord.key(),
+            ctx.accounts.deposit_mint.key(),
+            ctx.accounts.receipt_mint.key(),
+            ctx.accounts.tenant_destination.key(),
+            ctx.accounts.landlord_destination.key(),
+            ctx.bumps.tenancy,
+            args,
+        )
     }
 
     pub fn fund(ctx: Context<Fund>, nonce: u64) -> Result<()> {
@@ -332,6 +305,68 @@ pub mod rental_escrow {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
+fn initialize_tenancy(
+    t: &mut Account<Tenancy>,
+    reserve: &AccountInfo,
+    market: &AccountInfo,
+    tenant: Pubkey,
+    landlord: Pubkey,
+    deposit_mint: Pubkey,
+    receipt_mint: Pubkey,
+    tenant_destination: Pubkey,
+    landlord_destination: Pubkey,
+    bump: u8,
+    args: InitializeArgs,
+) -> Result<()> {
+    require!(cfg!(feature = "test-deployment"), EscrowError::DeploymentDisabled);
+    require_keys_eq!(deposit_mint, TEST_USDC, EscrowError::InvalidAsset);
+    require!(
+        args.required_security > 0 && args.required_security <= 10_000_000_000,
+        EscrowError::InvalidAmount
+    );
+    require!(args.policy_hash != [0; 32], EscrowError::InvalidPolicy);
+    require!(
+        tenant != landlord
+            && args.arbitrator != tenant
+            && args.arbitrator != landlord
+            && args.arbitrator != Pubkey::default(),
+        EscrowError::InvalidParties
+    );
+    t.lease_id = args.lease_id;
+    t.tenant = tenant;
+    t.landlord = landlord;
+    t.arbitrator = args.arbitrator;
+    t.deposit_mint = deposit_mint;
+    t.reserve = *reserve.key;
+    t.market = *market.key;
+    t.receipt_mint = receipt_mint;
+    t.liquidity_supply = args.liquidity_supply;
+    t.market_authority = args.market_authority;
+    t.tenant_destination = tenant_destination;
+    t.landlord_destination = landlord_destination;
+    t.policy_hash = args.policy_hash;
+    t.release_permitted = args.release_permitted;
+    t.required_security = args.required_security;
+    t.accounted_idle = 0;
+    t.accounted_receipts = 0;
+    t.released_earnings = 0;
+    t.next_nonce = 0;
+    t.claim_amount = 0;
+    t.approved_claim = 0;
+    t.phase = Phase::AwaitingFunding;
+    t.bump = bump;
+    let snapshot = lending::inspect(reserve, market, t)?;
+    require!(snapshot.healthy, EscrowError::ProtocolUnavailable);
+    emit!(FinanceEvent {
+        tenancy: t.key(),
+        nonce: 0,
+        kind: EventKind::Initialized,
+        amount: args.required_security
+    });
+    Ok(())
+}
+
 fn transfer_from_escrow<'info>(
     t: &Account<'info, Tenancy>,
     from: &Account<'info, TokenAccount>,
@@ -375,6 +410,38 @@ pub struct Initialize<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
     pub tenant: Signer<'info>,
+    pub landlord: Signer<'info>,
+    #[account(init,payer=payer,space=8+Tenancy::INIT_SPACE,seeds=[b"tenancy",tenant.key().as_ref(),&args.lease_id],bump)]
+    pub tenancy: Account<'info, Tenancy>,
+    #[account(mint::decimals = 6)]
+    pub deposit_mint: Account<'info, Mint>,
+    pub receipt_mint: Account<'info, Mint>,
+    #[account(init,payer=payer,seeds=[b"cash",tenancy.key().as_ref()],bump,token::mint=deposit_mint,token::authority=tenancy)]
+    pub cash: Account<'info, TokenAccount>,
+    #[account(init,payer=payer,seeds=[b"receipts",tenancy.key().as_ref()],bump,token::mint=receipt_mint,token::authority=tenancy)]
+    pub receipts: Account<'info, TokenAccount>,
+    #[account(token::mint=deposit_mint,token::authority=tenant)]
+    pub tenant_destination: Account<'info, TokenAccount>,
+    #[account(token::mint=deposit_mint,token::authority=landlord)]
+    pub landlord_destination: Account<'info, TokenAccount>,
+    /// CHECK: KLend owner, discriminator, fields and derived accounts verified by lending::inspect.
+    #[account(owner=klend_interface::KLEND_PROGRAM_ID)]
+    pub reserve: UncheckedAccount<'info>,
+    /// CHECK: KLend owner and discriminator verified by lending::inspect.
+    #[account(owner=klend_interface::KLEND_PROGRAM_ID)]
+    pub market: UncheckedAccount<'info>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(args:InitializeArgs)]
+pub struct InitializeStaged<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    /// CHECK: The tenant key fixes the PDA and payout authority. No tenant funds move here;
+    /// the tenant must later sign `fund` after reviewing every stored term.
+    pub tenant: UncheckedAccount<'info>,
     pub landlord: Signer<'info>,
     #[account(init,payer=payer,space=8+Tenancy::INIT_SPACE,seeds=[b"tenancy",tenant.key().as_ref(),&args.lease_id],bump)]
     pub tenancy: Account<'info, Tenancy>,

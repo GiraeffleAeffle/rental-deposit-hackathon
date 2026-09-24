@@ -13,6 +13,7 @@ import {
   getTransactionEncoder,
   setTransactionMessageFeePayer,
   setTransactionMessageLifetimeUsingBlockhash,
+  type SignatureBytes,
 } from '@solana/kit';
 import {
   atomic,
@@ -76,6 +77,7 @@ export async function payoutTokenAccount(config: SolanaConfiguration, owner: str
 type PartyRole = 'tenant' | 'landlord';
 type InitState = 'prepared' | 'signed' | 'broadcast' | 'unknown' | 'finalized' | 'failed';
 export type SolanaInitialization = {
+  setupMode: 'joint' | 'staged';
   agreementId: string;
   tenancyAddress: string;
   policyHash: string;
@@ -225,6 +227,7 @@ export function createSolanaInitializationService(input: {
   const { store, config, gateway, sponsor } = input;
   const now = input.now ?? Date.now;
   const recovery = input.recoveryGate ?? requireWalletRecovery;
+  const requiredRoles: PartyRole[] = config.setupMode === 'staged' ? ['landlord'] : ['tenant', 'landlord'];
   const recordKey = `solana-initialization:${hash(`${config.genesisHash}:${config.tenancyAddress}`)}`;
   async function access(identity: VerifiedIdentity, signing = false) {
     const agreement = await store.get<Agreement>(`agreement:${config.agreementId}`);
@@ -234,8 +237,10 @@ export function createSolanaInitializationService(input: {
     const party = agreement.parties[role]!;
     if (identity.expiresAt * 1000 <= now() || party.wallet.chainType !== 'solana')
       fail('identity_expired', 'Sign in again before authorizing this tenancy.', 401);
-    if (signing && role === 'arbitrator')
-      fail('signer_required', 'The tenant and landlord initialize this tenancy.', 403);
+    if (signing && !requiredRoles.includes(role as PartyRole))
+      fail('signer_required', config.setupMode === 'staged'
+        ? 'Only the landlord creates this empty escrow; the tenant signs funding later.'
+        : 'The tenant and landlord initialize this tenancy.', 403);
     if (signing) await recovery(store, identity, party.wallet.id);
     const digest = agreementDigest(agreement);
     if (
@@ -276,7 +281,8 @@ export function createSolanaInitializationService(input: {
     void _;
     return {
       ...visible,
-      signedRoles: (['tenant', 'landlord'] as const).filter((role) => Boolean(signatures[role])),
+      setupMode: record.setupMode ?? 'joint',
+      signedRoles: requiredRoles.filter((role) => Boolean(signatures[role])),
       role: verified.role,
       walletId: verified.wallet.id,
       feePayer: sponsor.address,
@@ -285,7 +291,10 @@ export function createSolanaInitializationService(input: {
     };
   }
   async function existing() {
-    return store.get<SolanaInitialization>(recordKey);
+    const record = await store.get<SolanaInitialization>(recordKey);
+    if (record && (record.setupMode ?? 'joint') !== config.setupMode)
+      fail('setup_mode_changed', 'The configured setup mode differs from the recorded transaction.');
+    return record;
   }
   async function stillLive(record: SolanaInitialization) {
     if (Date.parse(record.expiresAt) <= now()) return false;
@@ -382,15 +391,26 @@ export function createSolanaInitializationService(input: {
         walletId: verified.wallet.id,
         feePayer: sponsor.address,
         cluster: config.cluster,
+        setupMode: config.setupMode,
         walletChain: config.cluster === 'devnet' ? ('solana:devnet' as const) : null,
         initialization: record ? publicView(record, verified) : null,
       };
     },
     async prepare(identity: VerifiedIdentity) {
       const verified = await access(identity, true);
-      const prior = await existing();
-      if (prior && ['signed', 'broadcast', 'unknown', 'finalized'].includes(prior.state))
-        return publicView(prior, verified);
+      let prior = await existing();
+      if (prior && ['signed', 'broadcast', 'unknown'].includes(prior.state)) {
+        prior = await reconcileStored(verified);
+        const receipt = prior.receipt as { status?: unknown; reason?: unknown } | null;
+        const lifetime = await gateway.lifetime();
+        if (
+          prior.state !== 'unknown' ||
+          receipt?.status !== 'unknown' ||
+          receipt.reason !== 'signature-not-observed-do-not-resubmit-new-intent' ||
+          atomic(lifetime.blockHeight) <= atomic(prior.lastValidBlockHeight)
+        ) return publicView(prior, verified);
+      }
+      if (prior?.state === 'finalized') return publicView(prior, verified);
       if (prior?.state === 'prepared' && (await stillLive(prior)))
         return publicView(prior, verified);
       await preflight(verified);
@@ -399,6 +419,7 @@ export function createSolanaInitializationService(input: {
         fail('blockhash_expired', 'Request a fresh blockhash.');
       const instruction = await buildInitializeEscrow({
         manifest: config,
+        mode: config.setupMode,
         payer: sponsor.address,
         tenant: verified.tenant,
         landlord: verified.landlord,
@@ -427,13 +448,14 @@ export function createSolanaInitializationService(input: {
       const message = appendTransactionMessageInstruction(instruction, computeMessage);
       const bytes = new Uint8Array(getTransactionEncoder().encode(compileTransaction(message)));
       if (bytes.length > 1232) fail('transaction_too_large', 'Initialization exceeds Solana size limits.');
-      const simulation = await gateway.simulate(bytes, sponsor.address, verified.tenant);
+      const simulation = await gateway.simulate(bytes, sponsor.address, config.setupMode === 'staged' ? verified.landlord : verified.tenant);
       if (atomic(simulation.sponsorDebitCeilingLamports) > atomic(config.maximumSponsorLamports))
         fail('sponsor_limit', 'The initialization rent and fee exceed the configured sponsor limit.');
       const expiresAt =
         now() +
         Math.min(Number(atomic(lifetime.lastValidBlockHeight) - atomic(lifetime.blockHeight)) * 300, 90_000);
       const record: SolanaInitialization = {
+        setupMode: config.setupMode,
         agreementId: config.agreementId,
         tenancyAddress: config.tenancyAddress,
         policyHash: verified.digest.slice(2),
@@ -466,7 +488,16 @@ export function createSolanaInitializationService(input: {
         }
       }
       const saved = await update((current) => {
-        if (['signed', 'broadcast', 'unknown', 'finalized'].includes(current.state)) return current;
+        const receipt = current.receipt as { status?: unknown; reason?: unknown } | null;
+        const expiredUnobserved =
+          current.state === 'unknown' &&
+          current.signature === prior?.signature &&
+          current.messageSha256 === prior.messageSha256 &&
+          receipt?.status === 'unknown' &&
+          receipt.reason === 'signature-not-observed-do-not-resubmit-new-intent' &&
+          atomic(lifetime.blockHeight) > atomic(current.lastValidBlockHeight);
+        if (['signed', 'broadcast', 'unknown', 'finalized'].includes(current.state) && !expiredUnobserved)
+          return current;
         if (
           current.state === 'prepared' &&
           Date.parse(current.expiresAt) > now() &&
@@ -506,42 +537,35 @@ export function createSolanaInitializationService(input: {
           fail('signature_conflict', 'This party already signed a different transaction.');
         return { ...current, signatures: { ...current.signatures, [role]: encoded } };
       });
-      if (!stored.signatures.tenant || !stored.signatures.landlord)
+      if (!requiredRoles.every((required) => Boolean(stored.signatures[required])))
         return publicView(stored, verified);
       await preflight(verified);
       if (!(await stillLive(stored))) fail('blockhash_expired', 'Refresh the initialization and sign again.');
       const template = getTransactionDecoder().decode(Buffer.from(stored.transactionBase64, 'base64'));
-      const tenantSignature = new Uint8Array(Buffer.from(stored.signatures.tenant, 'base64'));
-      const landlordSignature = new Uint8Array(Buffer.from(stored.signatures.landlord, 'base64'));
-      const signatures = {
-        ...template.signatures,
-        [address(verified.tenant)]: tenantSignature,
-        [address(verified.landlord)]: landlordSignature,
-      };
-      for (const [party, signature] of [
-        [verified.tenant, tenantSignature],
-        [verified.landlord, landlordSignature],
-      ] as const) {
+      const partySignatures = requiredRoles.map((required) => ({
+        party: verified[required],
+        signature: new Uint8Array(Buffer.from(stored.signatures[required]!, 'base64')),
+      }));
+      const signatures = { ...template.signatures };
+      for (const { party, signature } of partySignatures) {
         if (!signature || !verifyEd25519(null, Buffer.from(template.messageBytes), key(party), Buffer.from(signature)))
           fail('invalid_signature', 'The stored party signatures do not verify.');
+        signatures[address(party)] = signature as SignatureBytes;
       }
-      const jointlySigned = new Uint8Array(
+      const partySigned = new Uint8Array(
         getTransactionEncoder().encode({ ...template, signatures }),
       );
-      const simulation = await gateway.simulate(jointlySigned, sponsor.address, verified.tenant);
+      const simulation = await gateway.simulate(partySigned, sponsor.address, config.setupMode === 'staged' ? verified.landlord : verified.tenant);
       if (atomic(simulation.sponsorDebitCeilingLamports) > atomic(config.maximumSponsorLamports))
         fail('sponsor_limit', 'The sponsor rent and fee limit would be exceeded.');
-      const complete = await sponsor.sign(jointlySigned);
+      const complete = await sponsor.sign(partySigned);
       if ((await messageDigest(complete)) !== stored.messageSha256)
         throw new Error('Sponsor changed the accepted initialization message');
       const done = getTransactionDecoder().decode(complete);
       const payerSignature = done.signatures[address(sponsor.address)];
       if (!payerSignature || !verifyEd25519(null, Buffer.from(done.messageBytes), key(sponsor.address), Buffer.from(payerSignature)))
         throw new Error('Sponsor signature did not verify');
-      for (const [party, signature] of [
-        [verified.tenant, tenantSignature],
-        [verified.landlord, landlordSignature],
-      ] as const) {
+      for (const { party, signature } of partySignatures) {
         if (!Buffer.from(done.signatures[address(party)] ?? []).equals(Buffer.from(signature)))
           throw new Error('Sponsor changed a party signature');
       }

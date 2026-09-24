@@ -181,7 +181,7 @@ function AccountConnections() {
         </section>
       )}
       {wallet.authenticated && requestReady && <ConnectedAgreements request={authorized} />}
-      {wallet.authenticated && <SolanaInitializationPanel request={authorized} />}
+      {wallet.authenticated && requestReady && <SolanaInitializationPanel request={authorized} />}
       <div className="connection-grid">
         <section className="card">
           <span className="eyebrow">SHARED APPLICATION</span>

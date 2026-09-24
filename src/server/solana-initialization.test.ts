@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import {
   generateKeyPairSigner,
   getAddressDecoder,
+  getCompiledTransactionMessageDecoder,
   getTransactionDecoder,
   getTransactionEncoder,
   partiallySignTransaction,
@@ -22,7 +23,7 @@ import { deriveEscrowAddresses, SOLANA_DEVNET_MANIFEST } from '../finance/solana
 import type { VerifiedIdentity } from '../wallets/identity-policy.ts';
 
 const addressFor = (byte: number) => getAddressDecoder().decode(new Uint8Array(32).fill(byte));
-async function fixture() {
+async function fixture(setupMode: 'joint' | 'staged' = 'joint') {
   const [tenant, landlord, arbitrator, sponsor] = await Promise.all(
     Array.from({ length: 4 }, () => generateKeyPairSigner()),
   );
@@ -64,6 +65,7 @@ async function fixture() {
   };
   await store.create(`agreement:${agreement.id}`, agreement);
   const config = {
+    setupMode,
     cluster: 'devnet',
     genesisHash: SOLANA_DEVNET_MANIFEST.genesisHash,
     escrowProgram: addressFor(10),
@@ -127,15 +129,16 @@ async function fixture() {
       bump: derived.bump,
     },
   };
-  const state = { now: 100000, blockHeight: '100', sponsorCost: '8500000', final: false, sent: [] as string[], preflights: 0 };
+  const state = { now: 100000, blockHeight: '100', lastValidBlockHeight: '300', blockhash: addressFor(30), sponsorCost: '8500000', final: false, accountExists: false, sent: [] as string[], preflights: 0 };
   const gateway: InitializationGateway = {
     preflight: async (input) => {
       state.preflights++;
+      if (state.accountExists) throw new Error('Tenancy already exists');
       assert.equal(input.tenancyAddress, derived.tenancy);
       assert.equal(input.tenantDestination, tenantDestination);
       assert.equal(input.landlordDestination, landlordDestination);
     },
-    lifetime: async () => ({ blockhash: addressFor(30), lastValidBlockHeight: '300', blockHeight: state.blockHeight }),
+    lifetime: async () => ({ blockhash: state.blockhash, lastValidBlockHeight: state.lastValidBlockHeight, blockHeight: state.blockHeight }),
     simulate: async () => ({ slot: '100', sponsorDebitCeilingLamports: state.sponsorCost, networkFeeLamports: '15000' }),
     broadcast: async (bytes) => {
       const recordId = createHash('sha256')
@@ -197,6 +200,28 @@ test('separate recovered wallets sign one accepted agreement; sponsor persists b
   await f.store.close();
 });
 
+test('staged setup needs only the landlord; the tenant remains the sole funding signer', async () => {
+  const f = await fixture('staged');
+  await assert.rejects(f.service.prepare(f.identities.tenant), /Only the landlord/);
+  const plan = await f.service.prepare(f.identities.landlord);
+  assert.equal(plan.setupMode, 'staged');
+  const tx = getTransactionDecoder().decode(Buffer.from(plan.transactionBase64, 'base64'));
+  const compiled = getCompiledTransactionMessageDecoder().decode(tx.messageBytes);
+  assert.deepEqual([...Buffer.from(compiled.instructions[1].data!).subarray(0, 8)], [168, 74, 32, 26, 236, 97, 244, 1]);
+  assert.ok(Object.hasOwn(tx.signatures, f.landlord.address));
+  assert.equal(tx.signatures[f.tenant.address], undefined);
+  const sent = await f.service.sign(f.identities.landlord, await f.sign(plan.transactionBase64, f.landlord));
+  assert.deepEqual(sent.signedRoles, ['landlord']);
+  assert.equal(sent.state, 'broadcast');
+  assert.equal(f.state.sent.length, 1);
+  f.state.final = true;
+  const final = await f.service.reconcile(f.identities.tenant);
+  assert.equal(final.state, 'finalized');
+  assert.equal(f.snapshot.tenancy.phase, 'awaiting-funding');
+  assert.equal(f.snapshot.cashAtomic, '0');
+  await f.store.close();
+});
+
 test('changed message, wrong signer and expired blockhash cannot authorize setup', async () => {
   const f = await fixture();
   const plan = await f.service.prepare(f.identities.tenant);
@@ -219,5 +244,37 @@ test('sponsor rent ceiling fails before signature collection', async () => {
   f.state.sponsorCost = '10000001';
   await assert.rejects(f.service.prepare(f.identities.tenant), /sponsor limit/);
   assert.equal((await f.service.status(f.identities.tenant)).initialization, null);
+  await f.store.close();
+});
+
+
+test('expired unobserved setup can be replaced only after final block height and absence check', async () => {
+  const f = await fixture();
+  const first = await f.service.prepare(f.identities.landlord);
+  await f.service.sign(f.identities.landlord, await f.sign(first.transactionBase64, f.landlord));
+  const broadcast = await f.service.sign(f.identities.tenant, await f.sign(first.transactionBase64, f.tenant));
+  assert.equal(broadcast.state, 'broadcast');
+  const unknown = await f.service.reconcile(f.identities.landlord);
+  assert.equal(unknown.state, 'unknown');
+  const initialPreflights = f.state.preflights;
+
+  const stillLive = await f.service.prepare(f.identities.landlord);
+  assert.equal(stillLive.messageSha256, first.messageSha256);
+  assert.equal(f.state.preflights, initialPreflights);
+
+  f.state.blockHeight = '301';
+  f.state.blockhash = addressFor(31);
+  f.state.lastValidBlockHeight = '500';
+  f.state.accountExists = true;
+  await assert.rejects(f.service.prepare(f.identities.landlord), /Tenancy already exists/);
+  assert.equal((await f.service.status(f.identities.tenant)).initialization?.signature, broadcast.signature);
+
+  f.state.accountExists = false;
+  const fresh = await f.service.prepare(f.identities.landlord);
+  assert.equal(fresh.state, 'prepared');
+  assert.notEqual(fresh.messageSha256, first.messageSha256);
+  assert.deepEqual(fresh.signedRoles, []);
+  assert.equal(fresh.signature, null);
+  assert.equal(f.state.preflights, initialPreflights + 2);
   await f.store.close();
 });

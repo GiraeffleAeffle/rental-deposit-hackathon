@@ -269,6 +269,41 @@ impl Fixture {
         };
         self.send(ix, "both").unwrap();
     }
+    fn staged_initialize(&mut self, role: &str) -> TransactionResult {
+        let ix = Instruction {
+            program_id: ID,
+            accounts: accounts::InitializeStaged {
+                payer: self.payer.pubkey(),
+                tenant: self.tenant.pubkey(),
+                landlord: self.landlord.pubkey(),
+                tenancy: self.tenancy,
+                deposit_mint: TEST_USDC,
+                receipt_mint: self.receipt_mint,
+                cash: self.cash,
+                receipts: self.receipts,
+                tenant_destination: self.tenant_token,
+                landlord_destination: self.landlord_token,
+                reserve: self.reserve,
+                market: self.market,
+                token_program: anchor_spl::token::ID,
+                system_program: anchor_lang::system_program::ID,
+            }
+            .to_account_metas(None),
+            data: instruction::InitializeStaged {
+                args: InitializeArgs {
+                    lease_id: [1; 32],
+                    arbitrator: self.arbitrator.pubkey(),
+                    required_security: PRINCIPAL,
+                    policy_hash: [2; 32],
+                    release_permitted: true,
+                    liquidity_supply: self.supply,
+                    market_authority: self.market_authority,
+                },
+            }
+            .data(),
+        };
+        self.send(ix, role)
+    }
     fn fund(&mut self) {
         let ix = Instruction {
             program_id: ID,
@@ -398,6 +433,29 @@ impl Fixture {
             data: instruction::Settle { nonce }.data(),
         }
     }
+}
+
+#[test]
+#[ignore = "requires a newly built staged SBF and public KLend fixture paths; see program README"]
+fn staged_setup_is_landlord_only_and_does_not_fund_security() {
+    let mut f = Fixture::new();
+    let metas = accounts::InitializeStaged {
+        payer: f.payer.pubkey(), tenant: f.tenant.pubkey(), landlord: f.landlord.pubkey(),
+        tenancy: f.tenancy, deposit_mint: TEST_USDC, receipt_mint: f.receipt_mint,
+        cash: f.cash, receipts: f.receipts, tenant_destination: f.tenant_token,
+        landlord_destination: f.landlord_token, reserve: f.reserve, market: f.market,
+        token_program: anchor_spl::token::ID, system_program: anchor_lang::system_program::ID,
+    }.to_account_metas(None);
+    assert!(!metas[1].is_signer);
+    assert!(metas[2].is_signer);
+    f.staged_initialize("landlord").unwrap();
+    assert_eq!(f.state().phase, Phase::AwaitingFunding);
+    assert_eq!(f.state().accounted_idle, 0);
+    assert_eq!(f.balance(f.cash), 0);
+    f.fund();
+    assert_eq!(f.state().phase, Phase::Active);
+    assert_eq!(f.state().accounted_idle, PRINCIPAL);
+    assert_eq!(f.balance(f.cash), PRINCIPAL);
 }
 
 #[test]

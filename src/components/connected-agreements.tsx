@@ -282,7 +282,7 @@ export function ConnectedAgreements({
                   </p>
                   {agreement.network === 'solana' && (
                     <a className="button primary" href="#solana-setup">
-                      Continue to Solana setup <ArrowRight size={16} />
+                      Continue to deposit setup <ArrowRight size={16} />
                     </a>
                   )}
                 </>

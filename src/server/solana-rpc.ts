@@ -23,6 +23,7 @@ import {
 } from '../finance/solana/index.ts';
 
 export type SolanaConfiguration = DeploymentManifest & {
+  setupMode: 'joint' | 'staged';
   rpcUrl: string;
   agreementId: string;
   tenancyAddress: string;
@@ -125,6 +126,10 @@ export function solanaConfiguration(
     typeof candidate.tenancyAddress !== 'string'
   )
     throw new Error('Configure an existing accepted agreement and tenancy');
+  if (candidate.setupMode !== undefined && candidate.setupMode !== 'joint' && candidate.setupMode !== 'staged')
+    throw new Error('Invalid Solana setup mode');
+  if (candidate.setupMode === 'staged' && candidate.escrowProgram === 'BiwaGavQUsSsg48UPpRAGWoXSiUnzgvdDs7rd8WizvPD')
+    throw new Error('Staged setup requires a separate verified escrow deployment');
   address(candidate.tenancyAddress);
   if (
     !Number.isSafeInteger(candidate.programCodeLength) ||
@@ -143,6 +148,7 @@ export function solanaConfiguration(
     throw new Error('RPC must use HTTPS or loopback');
   return {
     ...deployment,
+    setupMode: candidate.setupMode === 'staged' ? 'staged' : 'joint',
     rpcUrl: url.toString(),
     agreementId: candidate.agreementId,
     tenancyAddress: candidate.tenancyAddress,

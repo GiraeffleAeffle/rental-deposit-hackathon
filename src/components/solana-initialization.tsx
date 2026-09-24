@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { RefreshCw, ShieldCheck } from 'lucide-react';
 import { useRentalWallet } from '@/wallets';
 import type { SolanaInitialization } from '@/server/solana-initialization';
@@ -22,6 +22,7 @@ type Setup = {
   walletId: string;
   feePayer: string;
   cluster: 'devnet' | 'localnet';
+  setupMode: 'joint' | 'staged';
   walletChain: 'solana:devnet' | null;
   initialization: Initialization | null;
 };
@@ -34,6 +35,7 @@ export function SolanaInitializationPanel({
   const [setup, setSetup] = useState<Setup | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const initialRequest = useRef(request);
   const initialization = setup?.initialization;
   const role = setup?.role;
   const signed = Boolean(role && initialization?.signedRoles.includes(role as 'tenant' | 'landlord'));
@@ -41,8 +43,32 @@ export function SolanaInitializationPanel({
   const walletConnected = signingWallet?.chainType === 'solana' && signingWallet.connected;
   const awaitingSignature =
     initialization?.state === 'prepared' &&
-    role !== 'arbitrator' &&
+    (setup?.setupMode === 'staged' ? role === 'landlord' : role !== 'arbitrator') &&
     !signed;
+  useEffect(() => {
+    if (!wallet.ready) return;
+    let active = true;
+    void initialRequest.current('/api/finance/solana/initialize')
+      .then((result) => { if (active) setSetup(result as Setup); })
+      .catch((error) => {
+        if (active) setMessage(error instanceof Error ? error.message : 'Tenancy setup is unavailable.');
+      });
+    return () => { active = false; };
+  }, [wallet.ready]);
+  useEffect(() => {
+    if (setup?.setupMode !== 'staged' ||
+        !setup.initialization?.signature ||
+        !['signed', 'broadcast'].includes(setup.initialization.state)) return;
+    const timer = window.setTimeout(() => {
+      void initialRequest.current('/api/finance/solana/initialize', { action: 'reconcile' })
+        .then((result) => setSetup((current) => current && {
+          ...current,
+          initialization: (result as { initialization: Initialization }).initialization,
+        }))
+        .catch((error) => setMessage(error instanceof Error ? error.message : 'Setup confirmation is pending.'));
+    }, 3000);
+    return () => window.clearTimeout(timer);
+  }, [setup?.setupMode, setup?.initialization?.state, setup?.initialization?.signature]);
   async function run(action: () => Promise<void>) {
     if (busy) return;
     setBusy(true);
@@ -64,26 +90,35 @@ export function SolanaInitializationPanel({
       initialization: Initialization;
     };
     setSetup((current) => current && { ...current, initialization: result.initialization });
-    setMessage(notice);
+    setMessage(
+      action === 'prepare' && result.initialization.state !== 'prepared'
+        ? 'The previous signed transaction is still being checked. No new signing window opened.'
+        : notice,
+    );
   }
-  async function sign() {
-    if (!initialization || !setup?.walletChain || !awaitingSignature)
+  async function sign(plan: Initialization | null = initialization ?? null) {
+    if (!plan || !setup?.walletChain ||
+        (setup.setupMode === 'staged' ? role !== 'landlord' : !awaitingSignature))
       throw new Error('Refresh the current initialization before signing.');
     if (!walletConnected)
       throw new Error('This Solana wallet is linked but not connected in this browser. Use a browser where Wallet and control details says Ready to request your signature.');
-    if (Date.parse(initialization.expiresAt) <= Date.now())
-      throw new Error('The signing window expired. Prepare a fresh one with both parties ready.');
-    const transaction = Uint8Array.from(atob(initialization.transactionBase64), (item) =>
+    if (Date.parse(plan.expiresAt) <= Date.now())
+      throw new Error(setup.setupMode === 'staged'
+        ? 'This review expired. Choose Create deposit space again.'
+        : 'The signing window expired. Prepare a fresh one with both parties ready.');
+    const transaction = Uint8Array.from(atob(plan.transactionBase64), (item) =>
       item.charCodeAt(0),
     );
     const signedBytes = await wallet.signSolanaTransaction({
-      operationId: `initialize:${initialization.agreementId}`,
+      operationId: `initialize:${plan.agreementId}`,
       walletId: setup.walletId,
       chain: setup.walletChain,
       feePayer: setup.feePayer,
-      expiresAt: initialization.expiresAt,
+      expiresAt: plan.expiresAt,
       transaction,
-      description: `Initialize the ${money(initialization.requiredSecurityAtomic)} test-USDC rental security for agreement ${initialization.agreementId}. This does not fund it.`,
+      description: setup.setupMode === 'staged'
+        ? `Create an empty rental deposit space for ${money(plan.requiredSecurityAtomic)} test USDC. This fixes the parties and terms but does not move the tenant's funds.`
+        : `Initialize the ${money(plan.requiredSecurityAtomic)} test-USDC rental security for agreement ${plan.agreementId}. This does not fund it.`,
     });
     const signedTxBase64 = btoa(
       Array.from(signedBytes, (byte) => String.fromCharCode(byte)).join(''),
@@ -93,10 +128,85 @@ export function SolanaInitializationPanel({
       signedTxBase64,
     })) as { initialization: Initialization };
     setSetup((current) => current && { ...current, initialization: result.initialization });
-    setMessage(
-      result.initialization.state === 'prepared'
+    setMessage(setup.setupMode === 'staged'
+      ? 'Your setup was submitted. We will confirm the empty deposit space before the tenant can fund it.'
+      : result.initialization.state === 'prepared'
         ? 'Your signature is recorded. The other party must review and sign these same bytes before expiry.'
         : 'Both parties signed. The fee sponsor submitted the exact initialization transaction.',
+    );
+  }
+  async function createDepositSpace() {
+    if (!setup || setup.setupMode !== 'staged' || setup.role !== 'landlord')
+      throw new Error('Only the landlord can create the empty deposit space.');
+    if (!walletConnected)
+      throw new Error('Connect your Solana wallet in this browser before creating the deposit space.');
+    const result = (await request('/api/finance/solana/initialize', { action: 'prepare' })) as {
+      initialization: Initialization;
+    };
+    setSetup((current) => current && { ...current, initialization: result.initialization });
+    if (result.initialization.state === 'prepared') await sign(result.initialization);
+    else setMessage('The previous setup is being checked. Refresh its result before trying again.');
+  }
+  if (setup?.setupMode === 'staged') {
+    const ready = initialization?.state === 'finalized';
+    const pending = Boolean(initialization?.signature &&
+      ['signed', 'broadcast', 'unknown'].includes(initialization.state));
+    const canResume = initialization?.state === 'unknown';
+    return (
+      <section className="card operation-section" id="solana-setup">
+        <div className="section-heading">
+          <h2>Rental deposit setup</h2>
+          <Badge tone={ready ? 'green' : 'neutral'}>{ready ? 'Deposit space ready' : 'Next step'}</Badge>
+        </div>
+        <p className="section-copy">
+          {ready
+            ? 'The agreed terms are fixed on devnet. The deposit space holds no security until the tenant funds it.'
+            : role === 'landlord'
+              ? 'Create the empty deposit space for the agreed terms. The tenant can add the security later, on their own time.'
+              : role === 'tenant'
+                ? 'The landlord prepares the empty deposit space. You will review its terms before depositing your test USDC.'
+                : 'The landlord prepares the empty deposit space; the tenant chooses when to fund it.'}
+        </p>
+        {initialization && (
+          <p className="note">
+            Required security: <strong>{money(initialization.requiredSecurityAtomic)} test USDC</strong>.
+            {ready ? ' Current setup is confirmed.' : ' No security has been deposited by this setup.'}
+          </p>
+        )}
+        <div className="button-row">
+          {role === 'landlord' && ((!ready && !pending) || canResume) && (
+            <button className="button primary" disabled={busy || !walletConnected} onClick={() => run(createDepositSpace)}>
+              <ShieldCheck size={16} /> {canResume ? 'Resume deposit setup' : 'Create deposit space'}
+            </button>
+          )}
+          {pending && (
+            <button className="button secondary" disabled={busy} onClick={() => run(() => change('reconcile', 'Checked the latest on-chain result.'))}>
+              <RefreshCw size={16} /> Check setup status
+            </button>
+          )}
+          <button className="button secondary" disabled={busy} onClick={() => run(refresh)}>
+            <RefreshCw size={16} /> Refresh
+          </button>
+          {ready && role === 'tenant' && (
+            <a className="button primary" href="#connected-solana-escrow">Review and fund deposit</a>
+          )}
+        </div>
+        {role === 'landlord' && !ready && !walletConnected && (
+          <p className="note" role="status">Connect the Solana wallet linked to this agreement to continue.</p>
+        )}
+        {message && <p className="note" role="status">{message}</p>}
+        {initialization?.lastError && <p className="note">{initialization.lastError}</p>}
+        <details className="operation-section">
+          <summary>Technical proof</summary>
+          <dl className="detail-list">
+            <div><dt>Agreement</dt><dd className="mono">{setup.agreementId}</dd></div>
+            <div><dt>Network</dt><dd>{setup.cluster}</dd></div>
+            <div><dt>Escrow</dt><dd className="mono">{setup.tenancyAddress}</dd></div>
+            <div><dt>Setup state</dt><dd>{initialization?.state ?? 'Not created'}</dd></div>
+            {initialization?.signature && <div><dt>Transaction</dt><dd className="mono">{initialization.signature}</dd></div>}
+          </dl>
+        </details>
+      </section>
     );
   }
   return (
@@ -158,7 +268,7 @@ export function SolanaInitializationPanel({
           )}
           <div className="button-row">
             {role !== 'arbitrator' &&
-              (!initialization || initialization.state === 'failed' || initialization.state === 'prepared') && (
+              (!initialization || initialization.state === 'failed' || initialization.state === 'prepared' || initialization.state === 'unknown') && (
                 <button
                   className="button secondary"
                   disabled={busy}
@@ -168,7 +278,7 @@ export function SolanaInitializationPanel({
                 </button>
               )}
             {awaitingSignature && (
-              <button className="button primary" disabled={busy || !walletConnected} onClick={() => run(sign)}>
+              <button className="button primary" disabled={busy || !walletConnected} onClick={() => run(() => sign())}>
                 <ShieldCheck size={16} /> Review and sign setup
               </button>
             )}

@@ -77,6 +77,7 @@ async function fixture() {
   const leaseId = new Uint8Array(32).fill(1),
     derived = await deriveEscrowAddresses(key(10), tenant.address, leaseId);
   const config: SolanaConfiguration = {
+    setupMode: 'joint',
     cluster: 'devnet',
     genesisHash: SOLANA_DEVNET_MANIFEST.genesisHash,
     escrowProgram: key(10),
@@ -565,11 +566,17 @@ test('configuration rejects mainnet, wrong genesis, wrong mint and missing deplo
       SOLANA_DEPLOYMENT_MANIFEST: JSON.stringify(f.config),
     };
     assert.ok(solanaConfiguration(environment));
+    assert.equal(solanaConfiguration({
+      ...environment,
+      SOLANA_DEPLOYMENT_MANIFEST: JSON.stringify({ ...f.config, setupMode: 'staged' }),
+    })?.setupMode, 'staged');
     for (const changed of [
       { ...f.config, cluster: 'mainnet-beta' },
       { ...f.config, genesisHash: SOLANA_MAINNET_MANIFEST.genesisHash },
       { ...f.config, depositMint: SOLANA_MAINNET_MANIFEST.deposit.mint },
       { ...f.config, programCodeLength: undefined },
+      { ...f.config, setupMode: 'unreviewed' },
+      { ...f.config, setupMode: 'staged', escrowProgram: 'BiwaGavQUsSsg48UPpRAGWoXSiUnzgvdDs7rd8WizvPD' },
     ])
       assert.throws(() =>
         solanaConfiguration({

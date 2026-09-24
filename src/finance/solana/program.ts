@@ -38,7 +38,7 @@ export async function deriveEscrowAddresses(program: string, tenant: string, lea
   return { tenancy, bump, cash, receipts };
 }
 const discriminators = {
-  initialize: [175, 175, 109, 31, 13, 152, 155, 237], fund: [218, 188, 111, 221, 152, 113, 174, 7],
+  initialize: [175, 175, 109, 31, 13, 152, 155, 237], initialize_staged: [168, 74, 32, 26, 236, 97, 244, 1], fund: [218, 188, 111, 221, 152, 113, 174, 7],
   supply: [81, 67, 116, 61, 250, 209, 5, 198], redeem: [184, 12, 86, 149, 70, 196, 97, 225],
   release_earnings: [133, 153, 190, 61, 65, 103, 225, 72], propose_claim: [70, 254, 74, 21, 158, 61, 195, 189],
   respond_to_claim: [45, 203, 133, 116, 107, 221, 231, 3], resolve_claim: [63, 99, 216, 44, 183, 52, 190, 140], settle: [175, 42, 185, 87, 144, 131, 102, 212],
@@ -80,7 +80,7 @@ export async function buildEscrowInstruction(input: {
 export async function buildInitializeEscrow(input: {
   manifest: DeploymentManifest; payer: string; tenant: string; landlord: string; arbitrator: string;
   leaseId: Uint8Array; policyHash: Uint8Array; releasePermitted: boolean; requiredSecurityAtomic: string;
-  tenantDestination: string; landlordDestination: string;
+  tenantDestination: string; landlordDestination: string; mode?: "joint" | "staged";
 }): Promise<Instruction> {
   const { manifest: m } = input;
   const amount = atomic(input.requiredSecurityAtomic, false);
@@ -88,8 +88,9 @@ export async function buildInitializeEscrow(input: {
   const derived = await deriveEscrowAddresses(m.escrowProgram, input.tenant, input.leaseId);
   const key = (value: string) => new Uint8Array(getAddressEncoder().encode(address(value)));
   const args = [input.leaseId, key(input.arbitrator), u64(input.requiredSecurityAtomic), input.policyHash, Uint8Array.of(input.releasePermitted ? 1 : 0), key(m.liquiditySupply), key(m.marketAuthority)];
-  return { programAddress: address(m.escrowProgram), data: concat([Uint8Array.from(discriminators.initialize), ...args]), accounts: [
-    meta(input.payer, AccountRole.WRITABLE_SIGNER), meta(input.tenant, AccountRole.READONLY_SIGNER), meta(input.landlord, AccountRole.READONLY_SIGNER), meta(derived.tenancy, AccountRole.WRITABLE),
+  const staged = input.mode === "staged";
+  return { programAddress: address(m.escrowProgram), data: concat([Uint8Array.from(staged ? discriminators.initialize_staged : discriminators.initialize), ...args]), accounts: [
+    meta(input.payer, AccountRole.WRITABLE_SIGNER), meta(input.tenant, staged ? AccountRole.READONLY : AccountRole.READONLY_SIGNER), meta(input.landlord, AccountRole.READONLY_SIGNER), meta(derived.tenancy, AccountRole.WRITABLE),
     meta(m.depositMint), meta(m.receiptMint), meta(derived.cash, AccountRole.WRITABLE), meta(derived.receipts, AccountRole.WRITABLE), meta(input.tenantDestination), meta(input.landlordDestination), meta(m.reserve), meta(m.market), meta(SOLANA_IDS.token), meta(SOLANA_IDS.system),
   ] };
 }

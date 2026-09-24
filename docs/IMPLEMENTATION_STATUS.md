@@ -1,6 +1,6 @@
 # Implementation status
 
-23 September 2026. The implementation target is the public `rental-deposit-hackathon` repository. The temporary name is unchanged. The legacy Gnosis application and its launch configuration are independent.
+24 September 2026. The implementation target is the public `rental-deposit-hackathon` repository. The temporary name is unchanged. The legacy Gnosis application and its launch configuration are independent.
 
 **The complete product journey runs as a persistent demonstration. Solana has a deployed operator-key devnet custody cycle and a separate Privy-connected application tenancy that initialized, funded and supplied 10 test USDC to Kamino. Earned yield, a Privy-connected exit and the investment journey remain unproved.**
 
@@ -38,6 +38,10 @@ The user also created a Jupiter developer organization and project team. A repla
 
 The user funded a dedicated Solana devnet deployer with test SOL. The reviewed test escrow is deployed and its upgraded executable hash and authority were verified against finalized accounts. A distinct operator tenant received 20 Circle test USDC; 10 completed the escrow/Kamino/no-claim cycle and returned to that tenant. The [devnet rehearsal](SOLANA_DEVNET_REHEARSAL.md) records signatures, costs and the null-oracle defect found and fixed during the live simulation. These operator keys are separate from Privy. In the application proof, three distinct Privy accounts joined one accepted agreement; tenant and landlord signed initialization, then the tenant signed funding and Kamino supply. All three application transactions finalized with matching account reads. Their identifiers are kept out of this public repository because they link the user's Privy wallets; local operation records retain the signed bytes and receipts. Solana HTTP writes still reject mainnet; localnet is an operator path without Privy browser-signing support. Robinhood sending defaults to disabled and requires the recorded deployment hash, accepted agreement and explicit sponsor limits. Its receipt policy uses three L2 confirmations; it is not an assertion of irreversible L1 settlement.
 
+A second Privy agreement was prepared to prove redemption and settlement without closing the first funded tenancy. Its landlord, tenant and arbitrator joined and the two parties accepted terms, but its on-chain initialization did **not** complete. Repeated attempts exposed the poor experience of coordinating both signatures within one short-lived Solana transaction. That agreement must not be described as an active or funded escrow. The [staged onboarding target](STAGED_SOLANA_ONBOARDING.md) separates landlord creation of an empty escrow from later tenant funding; no staged program is deployed yet.
+
+The repository now contains an offline `initialize_staged` program instruction, an explicit `setupMode` client/server path, a landlord-only setup service test and a role-specific setup panel. TypeScript tests and lint pass. This is **not** a native execution or devnet proof: the new instruction needs a new program ID, an SBF build and a local SVM run before a staged test tenancy can use it. The existing deployed program hash remains pinned to joint mode.
+
 ## Completed native and pricing evidence
 
 - **Robinhood:** 25 local contract tests including conservation fuzzing, plus two actual protocol tests on a fork of mainnet block **69,829,067**. The fork supplied a local token-balance fixture and advanced time synthetically. No Robinhood transaction was sent. See [contract evidence](../contracts/evm/README.md).
@@ -47,9 +51,9 @@ The user funded a dedicated Solana devnet deployer with test SOL. The reviewed t
 
 ## Next connected proof
 
-1. Redeem the app tenancy's lending receipts and complete a no-claim settlement with the same Privy accounts; use a separate tenancy for a contested claim. Record actual fees, token deltas and independently verified receipts.
+1. Keep the first funded Privy tenancy active. Complete redemption and no-claim settlement in a **separate** test tenancy after the [staged onboarding target](STAGED_SOLANA_ONBOARDING.md) is implemented and proved, then use another tenancy for a contested claim. Record actual fees, token deltas and independently verified receipts.
 2. Demonstrate an actual surplus before claiming earnings release. The current app position has 10 test USDC of receipt value against a 10 test-USDC security requirement, so it shows no releasable earnings.
 3. Obtain actual provider/instrument access. Review the live transaction route and its signing/sponsorship compatibility, then record small buy/sell fills and reconciled personal cash withdrawal. A successful indicative quote does not complete this step.
 4. Provision the hosted database, secrets, worker, backups, alerts and a stable passkey origin. Perform independent contract/security review and decide the market/provider operating arrangement before real customer funds.
 
-The local code is ready for that connected rehearsal work. It is not a production readiness claim. See [validation](VALIDATION.md) for checks and known toolchain limits; the [ADRs](adr/README.md) explain the implementation choices.
+The existing joint-signature setup is too cumbersome for a customer journey. Further connected rehearsals should follow the staged setup proof rather than asking users to synchronize browsers again. This is not a production readiness claim. See [validation](VALIDATION.md) for checks and known toolchain limits; the [ADRs](adr/README.md) explain the implementation choices.
