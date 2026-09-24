@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { RefreshCw, ShieldCheck } from 'lucide-react';
 import { useRentalWallet } from '@/wallets';
 import type { SolanaOperation } from '@/server/solana-service';
@@ -49,9 +49,19 @@ export function NativeSolana({
   const [evidence, setEvidence] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [expiredReviewId, setExpiredReviewId] = useState<string | null>(null);
   const tenancy = observation?.tenancy;
   const phase = tenancy?.phase;
   const role = observation?.role;
+  useEffect(() => {
+    if (operation?.state !== 'prepared') return;
+    const delay = Math.max(0, Date.parse(operation.expiresAt) - Date.now());
+    const timeout = window.setTimeout(() => setExpiredReviewId(operation.id), delay);
+    return () => window.clearTimeout(timeout);
+  }, [operation]);
+  const reviewExpired = operation?.state === 'prepared' &&
+    (expiredReviewId === operation.id ||
+      /(?:blockhash|operation) expired/i.test(message));
   async function run(action: () => Promise<void>) {
     if (busy) return;
     setBusy(true);
@@ -398,6 +408,11 @@ export function NativeSolana({
               {operation.lastError}
             </p>
           )}
+          {reviewExpired && (
+            <p className="note" role="status">
+              This review expired before signing. Use the review action above to prepare a fresh one.
+            </p>
+          )}
           <div className="button-row">
             {['signed', 'broadcast', 'unknown'].includes(operation.state) &&
               operation.walletId === observation?.walletId && (
@@ -417,7 +432,7 @@ export function NativeSolana({
                   Retry the same signed transaction
                 </button>
               )}
-            {operation.state === 'prepared' && operation.walletId === observation?.walletId && (
+            {operation.state === 'prepared' && !reviewExpired && operation.walletId === observation?.walletId && (
               <button
                 className="button primary"
                 disabled={busy || wallet.busy || !observation?.walletChain}

@@ -590,7 +590,8 @@ export function createSolanaService(dependencies: Dependencies) {
         const operations = record.operations.map((item) =>
           item.state === 'prepared' &&
           !item.signedTxBase64 &&
-          atomic(item.lastValidBlockHeight) < atomic(lifetime.blockHeight)
+          (Date.parse(item.expiresAt) <= now() ||
+            atomic(item.lastValidBlockHeight) < atomic(lifetime.blockHeight))
             ? { ...item, state: 'expired' as const }
             : item,
         );

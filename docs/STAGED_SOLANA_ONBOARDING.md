@@ -1,6 +1,6 @@
 # A usable Solana tenancy journey
 
-This is the next **target flow**, not a claim that the staged program is deployed. The existing funded Privy tenancy remains on the pinned joint-signature devnet program. [ADR 0009](adr/0009-stage-solana-escrow-setup-and-funding.md) records the new custody boundary.
+This is the next **user flow to prove**. The staged program is [deployed separately on devnet](evidence/SOLANA_STAGED_DEVNET_DEPLOYMENT_2026-09-24.json), with its finalized bytes and authority verified. A landlord using the recovered Privy wallet created an empty escrow for the separately accepted Exit proof apartment; a finalized account read matched the parties, policy and 10-test-USDC requirement, with zero cash and receipts. Tenant funding and exit remain unproved. The existing funded Privy tenancy remains on the pinned joint-signature program. [ADR 0009](adr/0009-stage-solana-escrow-setup-and-funding.md) records the custody boundary.
 
 ```mermaid
 flowchart LR
@@ -48,6 +48,6 @@ The app should open the correct agreement from its invitation or saved account m
 2. Test that only the landlord can create the empty escrow, only the tenant can fund the exact principal, and neither party can change accepted terms or fixed recipients. Prove the full native cycle again on a local SVM.
 3. Make the connected app's setup service select staged behavior **only** for a separately verified program hash and explicit manifest mode. Exercise interrupted, delayed and mismatched-agreement cases through signed service tests.
 4. Replace the setup panel with role-specific next actions and a compact progress view. Rehearse with two accounts asynchronously and complete the separate exit-proof tenancy before asking the user for another coordinated browser session.
-5. Deploy a new devnet program address, pin its binary hash and authority, then fund a new small test tenancy. Only after the end-to-end receipt proof should the staged flow be described as working.
+5. The new devnet program address, binary hash and authority are pinned, and the separate landlord-created empty escrow finalized. Fund it only after the tenant reviews the matching terms. Only after the end-to-end receipt proof should the staged flow be described as working.
 
 The existing test-USDC/Kamino flow proves custody through supply for one Privy tenancy. The Privy redemption/settlement and personal buy/sell remain unproved. A production deposit product needs separate provider, security, operations and legal review.

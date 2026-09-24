@@ -254,6 +254,28 @@ test('prepare is idempotent, reserves one nonce and persists exact bytes before 
     await f.store.close();
   }
 });
+test('an unsigned expired review can be replaced before blockhash expiry', async () => {
+  const f = await fixture();
+  try {
+    const first = await f.service.prepare(f.identity, 'request_0001', { kind: 'fund' });
+    f.state.now = Date.parse(first.expiresAt);
+    // The chain still reports the original blockhash as live. Only the
+    // unsigned local review has expired; no sponsor signature can exist.
+    const next = await f.service.prepare(f.identity, 'request_0002', { kind: 'fund' });
+    assert.notEqual(next.id, first.id);
+    assert.equal(next.nonce, first.nonce);
+    assert.equal(next.state, 'prepared');
+    assert.equal((await f.service.get(f.identity, first.id)).state, 'expired');
+    await assert.rejects(
+      f.service.authorize(f.identity, first.id, await f.sign(first)),
+      /expired/,
+    );
+    assert.equal(f.state.sponsorCalls, 0);
+    assert.equal(f.state.broadcasts.length, 0);
+  } finally {
+    await f.store.close();
+  }
+});
 test('arbitrary targets, recipients, sources and unsupported actions never enter planning', () => {
   for (const value of [
     { kind: 'fund', source: key(20) },
