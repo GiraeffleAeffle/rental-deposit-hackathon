@@ -22,6 +22,8 @@ test-deployment = []
 anchor-lang = "=0.32.1"
 anchor-spl = { version = "=0.32.1", default-features = false, features = ["token", "token_2022"] }
 klend-interface = { git = "https://github.com/Kamino-Finance/klend", rev = "a08760976f51a3a58c4a0c6ea27b4a0e565bca79" }
+# Agave v4.2.2's SBF toolchain uses rustc 1.89; fixed 1.31 needs 1.93.
+fixed = { version = "=1.30.0", default-features = false }
 uint = { version = "=0.10.0", default-features = false }
 
 [dev-dependencies]
