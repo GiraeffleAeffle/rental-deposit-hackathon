@@ -39,6 +39,8 @@ RENTAL_ESCROW_SBF=/tmp/rental-sbf/rental_escrow.so KAMINO_FIXTURE_DIR=/tmp/renta
 
 The download script uses read-only mainnet RPC calls to fetch the KLend executable, one reserve, its market, clock and configured oracle accounts. It writes program hash and snapshot slot provenance. It creates no wallet and sends no transaction. The test harness substitutes the test USDC mint and locally constructs test token accounts. A separate controlled-accrual fixture changes reserve liquidity and its matching token balance to exercise earnings release. These tests prove execution against a real protocol binary in a local SVM with test state; they are separate from the devnet operator proof and do not prove organic earnings or issuer trading.
 
+The [SBF CI job](../../.github/workflows/solana-sbf.yml) repeats this build and local SVM proof on an isolated runner using the SHA-256-pinned Agave v4.2.2 release. Its artifact is **local proof only**: this source still declares the existing program ID. A staged devnet deployment needs a new program keypair and ID, a rebuild, and a fresh binary hash and authority review. Do not deploy the CI artifact over the existing program.
+
 Verified through 2026-09-23:
 
 - 9 host tests: fixed-point rounding/overflow bounds, fee buckets, policy/shortfall rules, claim authority/limits/nonces, client account-layout compatibility and null-oracle omission.
