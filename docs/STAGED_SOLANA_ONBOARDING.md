@@ -1,6 +1,6 @@
 # A usable Solana tenancy journey
 
-This is the next **user flow to prove**. The staged program is [deployed separately on devnet](evidence/SOLANA_STAGED_DEVNET_DEPLOYMENT_2026-09-24.json), with its finalized bytes and authority verified. A landlord using the recovered Privy wallet created an empty escrow for the separately accepted Exit proof apartment; a finalized account read matched the parties, policy and 10-test-USDC requirement, with zero cash and receipts. Tenant funding and exit remain unproved. The existing funded Privy tenancy remains on the pinned joint-signature program. [ADR 0009](adr/0009-stage-solana-escrow-setup-and-funding.md) records the custody boundary.
+This is the **target customer journey and current connected proof**. The staged program is [deployed separately on devnet](evidence/SOLANA_STAGED_DEVNET_DEPLOYMENT_2026-09-24.json), with its finalized bytes and authority verified. A landlord using the recovered Privy wallet created an empty escrow for the separately accepted Exit proof apartment. The tenant later funded its 10 test USDC, supplied to Kamino and redeemed it. A zero-dollar landlord claim and tenant acceptance have finalized; the final payout is still pending. The existing funded Privy tenancy remains active on the pinned joint-signature program. [ADR 0009](adr/0009-stage-solana-escrow-setup-and-funding.md) records the custody boundary.
 
 ```mermaid
 flowchart LR
@@ -14,7 +14,7 @@ flowchart LR
     F -. only after release and route eligibility .-> I[Tenant's separate personal investments]
 ```
 
-Each box can be completed later, on a separate device, without asking the other person to stay online. A wallet transaction's short validity is handled within **one person's** review and signature; if it expires before signing, the app prepares a new transaction for that same action. Once a signed transaction is submitted, the app reconciles that exact transaction before offering a new one. The user sees a clear pending/completed state, not blockhashes, slots or signing windows.
+Each party has completed their actions at different times without staying online together. An unsigned operation can renew its short-lived blockhash for the same action, token movements and fee ceiling; a changed review stops before signing. A signed transaction retains its exact bytes for reconciliation. The present UI still exposes too much technical state and requires manual result checks; the target experience should show only a clear pending/completed step, with raw proof behind a disclosure.
 
 ## What each person sees
 
@@ -50,4 +50,4 @@ The app should open the correct agreement from its invitation or saved account m
 4. Replace the setup panel with role-specific next actions and a compact progress view. Rehearse with two accounts asynchronously and complete the separate exit-proof tenancy before asking the user for another coordinated browser session.
 5. The new devnet program address, binary hash and authority are pinned, and the separate landlord-created empty escrow finalized. Fund it only after the tenant reviews the matching terms. Only after the end-to-end receipt proof should the staged flow be described as working.
 
-The existing test-USDC/Kamino flow proves custody through supply for one Privy tenancy. The Privy redemption/settlement and personal buy/sell remain unproved. A production deposit product needs separate provider, security, operations and legal review.
+The staged Privy tenancy now proves custody through redemption and zero-claim acceptance, but final payout and personal buy/sell remain unproved. No organic yield accrued during this test. A production deposit product needs separate provider, security, operations and legal review.

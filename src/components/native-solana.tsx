@@ -6,6 +6,7 @@ import type { SolanaOperation } from '@/server/solana-service';
 import type { SolanaSnapshot } from '@/server/solana-rpc';
 import { parseAmount, displayAmount } from '@/domain/assets';
 import { Badge, money } from './workspace-panels';
+import { sameEconomicReview, settlementPayouts } from './solana-review';
 
 type Operation = Omit<SolanaOperation, 'signedTxBase64' | 'subject' | 'fingerprint'>;
 type Observation = SolanaSnapshot & {
@@ -36,6 +37,27 @@ const titles: Record<Action['kind'], string> = {
   resolve_claim: 'Record the assigned arbitration decision',
   settle: 'Pay the recorded security allocation',
 };
+function actionForReview(action: Operation['action']): Action {
+  switch (action.kind) {
+    case 'fund':
+      return { kind: 'fund' };
+    case 'settle':
+      return { kind: 'settle' };
+    case 'supply':
+    case 'release_earnings':
+    case 'propose_claim':
+    case 'resolve_claim':
+      return { kind: action.kind, amountAtomic: action.amountAtomic };
+    case 'redeem':
+      return {
+        kind: 'redeem',
+        receiptAtomic: action.receiptAtomic,
+        minimumReceivedAtomic: action.minimumReceivedAtomic,
+      };
+    case 'respond_to_claim':
+      return { kind: 'respond_to_claim', accept: action.accept };
+  }
+}
 
 export function NativeSolana({
   request,
@@ -53,6 +75,7 @@ export function NativeSolana({
   const tenancy = observation?.tenancy;
   const phase = tenancy?.phase;
   const role = observation?.role;
+  const settlement = operation && tenancy ? settlementPayouts(operation, tenancy) : null;
   useEffect(() => {
     if (operation?.state !== 'prepared') return;
     const delay = Math.max(0, Date.parse(operation.expiresAt) - Date.now());
@@ -108,19 +131,31 @@ export function NativeSolana({
   async function authorize() {
     if (!operation || !observation?.walletChain)
       throw new Error('Browser signing is available only for a configured devnet escrow.');
+    let current = operation;
+    if (Date.parse(current.expiresAt) <= Date.now() ||
+        /(?:blockhash|operation) expired/i.test(message)) {
+      const result = (await request('/api/finance/solana/operations', {
+        requestId: crypto.randomUUID(),
+        action: actionForReview(current.action),
+      })) as { operation: Operation };
+      setOperation(result.operation);
+      if (!sameEconomicReview(current, result.operation, Date.now()))
+        throw new Error('The renewed review changed. Check its details before signing.');
+      current = result.operation;
+    }
     const signed = await wallet.signSolanaTransaction({
-      operationId: operation.id,
-      walletId: operation.walletId,
+      operationId: current.id,
+      walletId: current.walletId,
       chain: observation.walletChain,
       feePayer: observation.feePayer,
-      expiresAt: operation.expiresAt,
-      transaction: Uint8Array.from(atob(operation.transactionBase64), (character) =>
+      expiresAt: current.expiresAt,
+      transaction: Uint8Array.from(atob(current.transactionBase64), (character) =>
         character.charCodeAt(0),
       ),
-      description: titles[operation.action.kind],
+      description: titles[current.action.kind],
     });
     const signedTxBase64 = btoa(Array.from(signed, (byte) => String.fromCharCode(byte)).join(''));
-    const result = (await request(`/api/finance/solana/operations/${operation.id}/authorize`, {
+    const result = (await request(`/api/finance/solana/operations/${current.id}/authorize`, {
       signedTxBase64,
     })) as { operation: Operation };
     setOperation(result.operation);
@@ -251,7 +286,7 @@ export function NativeSolana({
                 disabled={busy}
                 onClick={() => run(() => plan({ kind: 'respond_to_claim', accept: true }))}
               >
-                Review claim acceptance
+              Review {tenancy.claimAtomic === '0' ? 'no-deduction acceptance' : 'claim acceptance'}
               </button>
             )}
             {phase === 'settling' && tenancy.accountedReceiptsAtomic === '0' && (
@@ -390,9 +425,25 @@ export function NativeSolana({
               <div>
                 <dt>Response</dt>
                 <dd>
-                  {operation.action.accept ? 'Accept the claim' : 'Request assigned arbitration'}
+                  {operation.action.accept
+                    ? tenancy?.claimAtomic === '0'
+                      ? 'Confirm no deduction'
+                      : 'Accept the claim'
+                    : 'Request assigned arbitration'}
                 </dd>
               </div>
+            )}
+            {operation.action.kind === 'settle' && settlement && (
+              <>
+                <div>
+                  <dt>Return to tenant</dt>
+                  <dd>{money(settlement.tenantAtomic)} USDC</dd>
+                </div>
+                <div>
+                  <dt>Pay to landlord</dt>
+                  <dd>{money(settlement.landlordAtomic)} USDC</dd>
+                </div>
+              </>
             )}
             <div>
               <dt>Sponsor debit ceiling</dt>
@@ -403,6 +454,11 @@ export function NativeSolana({
               <dd>{new Date(operation.expiresAt).toLocaleString()}</dd>
             </div>
           </dl>
+          {operation.action.kind === 'settle' && !settlement && (
+            <p className="note" role="status">
+              The fixed-recipient settlement amounts could not be verified. Do not sign this review.
+            </p>
+          )}
           {operation.lastError && (
             <p className="note" role="status">
               {operation.lastError}
@@ -410,7 +466,7 @@ export function NativeSolana({
           )}
           {reviewExpired && (
             <p className="note" role="status">
-              This review expired before signing. Use the review action above to prepare a fresh one.
+              This review expired before signing. Renewing will keep the same action, token movements and fee ceiling, or stop for a new review if they changed.
             </p>
           )}
           <div className="button-row">
@@ -432,13 +488,14 @@ export function NativeSolana({
                   Retry the same signed transaction
                 </button>
               )}
-            {operation.state === 'prepared' && !reviewExpired && operation.walletId === observation?.walletId && (
+            {operation.state === 'prepared' && operation.walletId === observation?.walletId && (
               <button
                 className="button primary"
-                disabled={busy || wallet.busy || !observation?.walletChain}
+                disabled={busy || wallet.busy || !observation?.walletChain ||
+                  (operation.action.kind === 'settle' && !settlement)}
                 onClick={() => run(authorize)}
               >
-                <ShieldCheck size={16} /> Sign reviewed devnet action
+                <ShieldCheck size={16} /> {reviewExpired ? 'Renew and sign reviewed devnet action' : 'Sign reviewed devnet action'}
               </button>
             )}
             <button className="button secondary" disabled={busy} onClick={() => run(reconcile)}>

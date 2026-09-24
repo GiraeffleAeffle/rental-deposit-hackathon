@@ -19,5 +19,5 @@
   "oracleAccounts": ["Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX"],
   "operatorOnly": true,
   "ciProof": "https://github.com/GiraeffleAeffle/rental-deposit-hackathon/actions/runs/35969371724",
-  "caveat": "Separate devnet test program; finalized executable and authority verified. A separate Privy-backed agreement initialized an empty escrow through the staged instruction, with matching parties and policy, zero cash and zero receipts verified at a finalized slot. Its wallet identities and receipt are retained locally. Tenant funding, exit, organic yield and investment orders are not yet proved on this program."
+  "caveat": "Separate devnet test program; finalized executable and authority verified. A Privy-backed agreement initialized an empty escrow through the staged instruction, then finalized tenant funding, Kamino supply/redemption, a zero-dollar landlord claim and tenant acceptance. Independent finalized account reads found 10 test USDC back in escrow with zero receipts, then the claim/approval phase with zero landlord allocation. Wallet identities and transaction receipts are retained locally. Final payout, organic yield and investment orders are not yet proved on this program."
 }
