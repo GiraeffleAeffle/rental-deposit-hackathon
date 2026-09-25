@@ -1,0 +1,706 @@
+//! Executable SBF integration tests. Requires an explicit, read-only public KLend snapshot.
+//! Only the reserve mint and test token balances are replaced. No network calls occur in these tests.
+use anchor_lang::{
+    prelude::Pubkey,
+    solana_program::{
+        instruction::{AccountMeta, Instruction},
+        program_option::COption,
+        program_pack::Pack,
+    },
+    AccountDeserialize, InstructionData, ToAccountMetas,
+};
+use anchor_spl::token::spl_token::state::{Account as TokenAccount, AccountState, Mint};
+use base64::Engine;
+use klend_interface::{state::Reserve, KLEND_PROGRAM_ID};
+use litesvm::{types::TransactionResult, LiteSVM};
+use rental_escrow::{
+    accounts, instruction,
+    state::{Phase, Tenancy},
+    InitializeArgs, ID, TEST_USDC,
+};
+use solana_account::Account;
+use solana_keypair::Keypair;
+use solana_message::Message;
+use solana_signer::Signer;
+use solana_transaction::Transaction;
+use std::{path::PathBuf, str::FromStr};
+
+const PRINCIPAL: u64 = 3_000_000_000;
+const CLAIM: u64 = 120_000_000;
+struct Fixture {
+    svm: LiteSVM,
+    payer: Keypair,
+    tenant: Keypair,
+    landlord: Keypair,
+    arbitrator: Keypair,
+    tenancy: Pubkey,
+    cash: Pubkey,
+    receipts: Pubkey,
+    tenant_token: Pubkey,
+    landlord_token: Pubkey,
+    market: Pubkey,
+    reserve: Pubkey,
+    receipt_mint: Pubkey,
+    supply: Pubkey,
+    market_authority: Pubkey,
+    oracles: Vec<Pubkey>,
+}
+fn token_data(mint: Pubkey, owner: Pubkey, amount: u64) -> Vec<u8> {
+    let mut data = vec![0; TokenAccount::LEN];
+    TokenAccount::pack(
+        TokenAccount {
+            mint,
+            owner,
+            amount,
+            delegate: COption::None,
+            state: AccountState::Initialized,
+            is_native: COption::None,
+            delegated_amount: 0,
+            close_authority: COption::None,
+        },
+        &mut data,
+    )
+    .unwrap();
+    data
+}
+fn mint_data(authority: Pubkey, supply: u64) -> Vec<u8> {
+    let mut data = vec![0; Mint::LEN];
+    Mint::pack(
+        Mint {
+            mint_authority: COption::Some(authority),
+            supply,
+            decimals: 6,
+            is_initialized: true,
+            freeze_authority: COption::None,
+        },
+        &mut data,
+    )
+    .unwrap();
+    data
+}
+fn put(svm: &mut LiteSVM, key: Pubkey, owner: Pubkey, data: Vec<u8>) {
+    svm.set_account(
+        key,
+        Account {
+            lamports: svm.minimum_balance_for_rent_exemption(data.len()),
+            data,
+            owner,
+            executable: false,
+            rent_epoch: 0,
+        },
+    )
+    .unwrap();
+}
+impl Fixture {
+    fn new() -> Self {
+        let binary = PathBuf::from(
+            std::env::var("RENTAL_ESCROW_SBF")
+                .expect("set RENTAL_ESCROW_SBF to the test-deployment SBF binary"),
+        );
+        let dir = PathBuf::from(
+            std::env::var("KAMINO_FIXTURE_DIR")
+                .expect("set KAMINO_FIXTURE_DIR to the public read-only snapshot directory"),
+        );
+        let snapshot: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(dir.join("accounts.json")).unwrap()).unwrap();
+        let provenance: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(dir.join("provenance.json")).unwrap()).unwrap();
+        let mut svm = LiteSVM::new();
+        svm.add_program_from_file(ID, binary).unwrap();
+        svm.add_program_from_file(KLEND_PROGRAM_ID, dir.join("klend.so"))
+            .unwrap();
+        let mut clock: Option<anchor_lang::prelude::Clock> = None;
+        for (key, value) in snapshot["accounts"].as_object().unwrap() {
+            let key = Pubkey::from_str(key).unwrap();
+            let data = base64::engine::general_purpose::STANDARD
+                .decode(value["data"][0].as_str().unwrap())
+                .unwrap();
+            if key == anchor_lang::solana_program::sysvar::clock::ID {
+                clock = Some(bincode::deserialize(&data).unwrap());
+                continue;
+            }
+            svm.set_account(
+                key,
+                Account {
+                    lamports: value["lamports"].as_u64().unwrap(),
+                    data,
+                    owner: value["owner"].as_str().unwrap().parse().unwrap(),
+                    executable: value["executable"].as_bool().unwrap(),
+                    rent_epoch: 0,
+                },
+            )
+            .unwrap();
+        }
+        svm.set_sysvar(&clock.unwrap());
+        let market = Pubkey::from_str("7u3HeHxYDLhnCoErrtycNokbQYbWGzLs6JSDqGAv5PfF").unwrap();
+        let reserve = Pubkey::from_str("D6q6wuQSrifJKZYpR1M8R4YawnLDtDsMmWM1NbBmgJ59").unwrap();
+        let market_authority =
+            klend_interface::pda::lending_market_authority(&KLEND_PROGRAM_ID, &market).0;
+        let mut reserve_account = svm.get_account(&reserve).unwrap();
+        let state = bytemuck::from_bytes_mut::<Reserve>(&mut reserve_account.data[8..]);
+        state.liquidity.mint_pubkey = TEST_USDC;
+        let supply = state.liquidity.supply_vault;
+        let receipt_mint = state.collateral.mint_pubkey;
+        let available = state.liquidity.total_available_amount;
+        let collateral_supply = state.collateral.mint_total_supply;
+        svm.set_account(reserve, reserve_account).unwrap();
+        put(
+            &mut svm,
+            TEST_USDC,
+            anchor_spl::token::ID,
+            mint_data(market_authority, available + PRINCIPAL),
+        );
+        put(
+            &mut svm,
+            receipt_mint,
+            anchor_spl::token::ID,
+            mint_data(market_authority, collateral_supply),
+        );
+        put(
+            &mut svm,
+            supply,
+            anchor_spl::token::ID,
+            token_data(TEST_USDC, market_authority, available),
+        );
+        let payer = Keypair::new();
+        let tenant = Keypair::new();
+        let landlord = Keypair::new();
+        let arbitrator = Keypair::new();
+        svm.airdrop(&payer.pubkey(), 2_000_000_000).unwrap();
+        for key in [tenant.pubkey(), landlord.pubkey(), arbitrator.pubkey()] {
+            svm.airdrop(&key, 1_000_000).unwrap();
+        }
+        let tenancy =
+            Pubkey::find_program_address(&[b"tenancy", tenant.pubkey().as_ref(), &[1; 32]], &ID).0;
+        let cash = Pubkey::find_program_address(&[b"cash", tenancy.as_ref()], &ID).0;
+        let receipts = Pubkey::find_program_address(&[b"receipts", tenancy.as_ref()], &ID).0;
+        let tenant_token = Pubkey::new_unique();
+        let landlord_token = Pubkey::new_unique();
+        put(
+            &mut svm,
+            tenant_token,
+            anchor_spl::token::ID,
+            token_data(TEST_USDC, tenant.pubkey(), PRINCIPAL),
+        );
+        put(
+            &mut svm,
+            landlord_token,
+            anchor_spl::token::ID,
+            token_data(TEST_USDC, landlord.pubkey(), 0),
+        );
+        let oracles = provenance["oracleAccounts"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|key| key.as_str().unwrap().parse().unwrap())
+            .collect();
+        Self {
+            svm,
+            payer,
+            tenant,
+            landlord,
+            arbitrator,
+            tenancy,
+            cash,
+            receipts,
+            tenant_token,
+            landlord_token,
+            market,
+            reserve,
+            receipt_mint: receipt_mint,
+            supply: supply,
+            market_authority,
+            oracles,
+        }
+    }
+    fn send(&mut self, ix: Instruction, role: &str) -> TransactionResult {
+        // A fresh transaction signature ensures replay failures exercise our nonce, not SVM's cache.
+        self.svm.expire_blockhash();
+        let mut signers = vec![&self.payer];
+        match role {
+            "both" => {
+                signers.push(&self.tenant);
+                signers.push(&self.landlord);
+            }
+            "tenant" => signers.push(&self.tenant),
+            "landlord" => signers.push(&self.landlord),
+            "arbitrator" => signers.push(&self.arbitrator),
+            _ => {}
+        }
+        let tx = Transaction::new(
+            &signers,
+            Message::new(&[ix], Some(&self.payer.pubkey())),
+            self.svm.latest_blockhash(),
+        );
+        self.svm.send_transaction(tx)
+    }
+    fn initialize(&mut self) {
+        let ix = Instruction {
+            program_id: ID,
+            accounts: accounts::Initialize {
+                payer: self.payer.pubkey(),
+                tenant: self.tenant.pubkey(),
+                landlord: self.landlord.pubkey(),
+                tenancy: self.tenancy,
+                deposit_mint: TEST_USDC,
+                receipt_mint: self.receipt_mint,
+                cash: self.cash,
+                receipts: self.receipts,
+                tenant_destination: self.tenant_token,
+                landlord_destination: self.landlord_token,
+                reserve: self.reserve,
+                market: self.market,
+                token_program: anchor_spl::token::ID,
+                system_program: anchor_lang::system_program::ID,
+            }
+            .to_account_metas(None),
+            data: instruction::Initialize {
+                args: InitializeArgs {
+                    lease_id: [1; 32],
+                    arbitrator: self.arbitrator.pubkey(),
+                    required_security: PRINCIPAL,
+                    policy_hash: [2; 32],
+                    release_permitted: true,
+                    liquidity_supply: self.supply,
+                    market_authority: self.market_authority,
+                },
+            }
+            .data(),
+        };
+        self.send(ix, "both").unwrap();
+    }
+    fn staged_initialize(&mut self, role: &str) -> TransactionResult {
+        let ix = Instruction {
+            program_id: ID,
+            accounts: accounts::InitializeStaged {
+                payer: self.payer.pubkey(),
+                tenant: self.tenant.pubkey(),
+                landlord: self.landlord.pubkey(),
+                tenancy: self.tenancy,
+                deposit_mint: TEST_USDC,
+                receipt_mint: self.receipt_mint,
+                cash: self.cash,
+                receipts: self.receipts,
+                tenant_destination: self.tenant_token,
+                landlord_destination: self.landlord_token,
+                reserve: self.reserve,
+                market: self.market,
+                token_program: anchor_spl::token::ID,
+                system_program: anchor_lang::system_program::ID,
+            }
+            .to_account_metas(None),
+            data: instruction::InitializeStaged {
+                args: InitializeArgs {
+                    lease_id: [1; 32],
+                    arbitrator: self.arbitrator.pubkey(),
+                    required_security: PRINCIPAL,
+                    policy_hash: [2; 32],
+                    release_permitted: true,
+                    liquidity_supply: self.supply,
+                    market_authority: self.market_authority,
+                },
+            }
+            .data(),
+        };
+        self.send(ix, role)
+    }
+    fn fund(&mut self) {
+        let ix = Instruction {
+            program_id: ID,
+            accounts: accounts::Fund {
+                tenant: self.tenant.pubkey(),
+                tenancy: self.tenancy,
+                deposit_mint: TEST_USDC,
+                source: self.tenant_token,
+                cash: self.cash,
+                token_program: anchor_spl::token::ID,
+            }
+            .to_account_metas(None),
+            data: instruction::Fund { nonce: 0 }.data(),
+        };
+        self.send(ix, "tenant").unwrap();
+    }
+    fn finance(&self, data: Vec<u8>, actor: Pubkey) -> Instruction {
+        let mut accounts = accounts::Finance {
+            actor,
+            tenancy: self.tenancy,
+            deposit_mint: TEST_USDC,
+            receipt_mint: self.receipt_mint,
+            cash: self.cash,
+            receipts: self.receipts,
+            destination: self.tenant_token,
+            reserve: self.reserve,
+            market: self.market,
+            market_authority: self.market_authority,
+            liquidity_supply: self.supply,
+            klend_program: KLEND_PROGRAM_ID,
+            instructions_sysvar: anchor_lang::solana_program::sysvar::instructions::ID,
+            token_program: anchor_spl::token::ID,
+        }
+        .to_account_metas(None);
+        accounts.extend(
+            self.oracles
+                .iter()
+                .map(|key| AccountMeta::new_readonly(*key, false)),
+        );
+        Instruction {
+            program_id: ID,
+            accounts,
+            data,
+        }
+    }
+    fn party(&self, actor: Pubkey, data: Vec<u8>) -> Instruction {
+        Instruction {
+            program_id: ID,
+            accounts: accounts::Party {
+                actor,
+                tenancy: self.tenancy,
+            }
+            .to_account_metas(None),
+            data,
+        }
+    }
+    fn state(&self) -> Tenancy {
+        Tenancy::try_deserialize(&mut self.svm.get_account(&self.tenancy).unwrap().data.as_slice())
+            .unwrap()
+    }
+    fn balance(&self, key: Pubkey) -> u64 {
+        TokenAccount::unpack(&self.svm.get_account(&key).unwrap().data)
+            .unwrap()
+            .amount
+    }
+    fn controlled_yield_fixture(&mut self, target_cash: u64) {
+        // This is an explicitly synthetic protocol-accrual fixture, never a claimed market return.
+        let t = self.state();
+        let mut account = self.svm.get_account(&self.reserve).unwrap();
+        let r = bytemuck::from_bytes_mut::<Reserve>(&mut account.data[8..]);
+        let target = target_cash - t.accounted_idle;
+        let original = r.liquidity.total_available_amount;
+        let net = |available| {
+            rental_escrow::accounting::net_liquidity_sf(
+                available,
+                u128::from(r.liquidity.borrowed_amount_sf),
+                u128::from(r.liquidity.accumulated_protocol_fees_sf),
+                u128::from(r.liquidity.accumulated_referrer_fees_sf),
+                u128::from(r.liquidity.pending_referrer_fees_sf),
+            )
+            .unwrap()
+        };
+        let value = |available| {
+            rental_escrow::accounting::receipt_value(
+                t.accounted_receipts,
+                r.collateral.mint_total_supply,
+                net(available),
+            )
+            .unwrap()
+        };
+        let mut low = original;
+        let mut high = original
+            + ((20_000_000u128 * r.collateral.mint_total_supply as u128)
+                / (t.accounted_receipts as u128)) as u64;
+        assert!(value(high) >= target);
+        while low < high {
+            let mid = low + (high - low) / 2;
+            if value(mid) < target {
+                low = mid + 1;
+            } else {
+                high = mid;
+            }
+        }
+        assert_eq!(value(low), target);
+        r.liquidity.total_available_amount = low;
+        self.svm.set_account(self.reserve, account).unwrap();
+        put(
+            &mut self.svm,
+            self.supply,
+            anchor_spl::token::ID,
+            token_data(TEST_USDC, self.market_authority, low),
+        );
+    }
+    fn settle(&self, tenant_destination: Pubkey, nonce: u64) -> Instruction {
+        Instruction {
+            program_id: ID,
+            accounts: accounts::Settle {
+                actor: self.tenant.pubkey(),
+                tenancy: self.tenancy,
+                deposit_mint: TEST_USDC,
+                cash: self.cash,
+                tenant_destination,
+                landlord_destination: self.landlord_token,
+                token_program: anchor_spl::token::ID,
+            }
+            .to_account_metas(None),
+            data: instruction::Settle { nonce }.data(),
+        }
+    }
+}
+
+#[test]
+#[ignore = "requires a newly built staged SBF and public KLend fixture paths; see program README"]
+fn staged_setup_is_landlord_only_and_does_not_fund_security() {
+    let mut f = Fixture::new();
+    let metas = accounts::InitializeStaged {
+        payer: f.payer.pubkey(), tenant: f.tenant.pubkey(), landlord: f.landlord.pubkey(),
+        tenancy: f.tenancy, deposit_mint: TEST_USDC, receipt_mint: f.receipt_mint,
+        cash: f.cash, receipts: f.receipts, tenant_destination: f.tenant_token,
+        landlord_destination: f.landlord_token, reserve: f.reserve, market: f.market,
+        token_program: anchor_spl::token::ID, system_program: anchor_lang::system_program::ID,
+    }.to_account_metas(None);
+    assert!(!metas[1].is_signer);
+    assert!(metas[2].is_signer);
+    f.staged_initialize("landlord").unwrap();
+    assert_eq!(f.state().phase, Phase::AwaitingFunding);
+    assert_eq!(f.state().accounted_idle, 0);
+    assert_eq!(f.balance(f.cash), 0);
+    f.fund();
+    assert_eq!(f.state().phase, Phase::Active);
+    assert_eq!(f.state().accounted_idle, PRINCIPAL);
+    assert_eq!(f.balance(f.cash), PRINCIPAL);
+}
+
+#[test]
+#[ignore = "requires explicit SBF and public KLend fixture paths; see program README"]
+fn executable_escrow_checks_authority_claim_replay_recipient_and_settlement() {
+    let mut f = Fixture::new();
+    f.initialize();
+    f.fund();
+    let ix = f.party(
+        f.tenant.pubkey(),
+        instruction::ProposeClaim {
+            amount: CLAIM,
+            nonce: 1,
+        }
+        .data(),
+    );
+    assert!(f.send(ix, "tenant").is_err());
+    let ix = f.party(
+        f.landlord.pubkey(),
+        instruction::ProposeClaim {
+            amount: CLAIM,
+            nonce: 1,
+        }
+        .data(),
+    );
+    f.send(ix.clone(), "landlord").unwrap();
+    assert!(f.send(ix, "landlord").is_err());
+    let ix = f.party(
+        f.landlord.pubkey(),
+        instruction::RespondToClaim {
+            accept: true,
+            nonce: 2,
+        }
+        .data(),
+    );
+    assert!(f.send(ix, "landlord").is_err());
+    let ix = f.party(
+        f.tenant.pubkey(),
+        instruction::RespondToClaim {
+            accept: false,
+            nonce: 2,
+        }
+        .data(),
+    );
+    f.send(ix, "tenant").unwrap();
+    let ix = f.party(
+        f.arbitrator.pubkey(),
+        instruction::ResolveClaim {
+            amount: CLAIM + 1,
+            nonce: 3,
+        }
+        .data(),
+    );
+    assert!(f.send(ix, "arbitrator").is_err());
+    let ix = f.party(
+        f.arbitrator.pubkey(),
+        instruction::ResolveClaim {
+            amount: CLAIM,
+            nonce: 3,
+        }
+        .data(),
+    );
+    f.send(ix, "arbitrator").unwrap();
+    let wrong = Pubkey::new_unique();
+    put(
+        &mut f.svm,
+        wrong,
+        anchor_spl::token::ID,
+        token_data(TEST_USDC, f.tenant.pubkey(), 0),
+    );
+    let ix = f.settle(wrong, 4);
+    assert!(f.send(ix, "tenant").is_err());
+    assert_eq!(f.state().next_nonce, 4);
+    let ix = f.settle(f.tenant_token, 4);
+    f.send(ix, "tenant").unwrap();
+    assert_eq!(f.balance(f.landlord_token), CLAIM);
+    assert_eq!(f.balance(f.tenant_token), PRINCIPAL - CLAIM);
+    assert_eq!(f.state().phase, Phase::Closed);
+    let ix = f.settle(f.tenant_token, 4);
+    assert!(f.send(ix, "tenant").is_err());
+}
+
+#[test]
+#[ignore = "requires explicit SBF and public KLend fixture paths; see program README"]
+fn real_klend_cpi_supplies_and_redeems_restricted_receipts() {
+    let mut f = Fixture::new();
+    f.initialize();
+    f.fund();
+    let ix = f.finance(
+        instruction::Supply {
+            amount: PRINCIPAL,
+            nonce: 1,
+        }
+        .data(),
+        f.landlord.pubkey(),
+    );
+    assert!(f.send(ix, "landlord").is_err());
+    let ix = f.finance(
+        instruction::Supply {
+            amount: PRINCIPAL,
+            nonce: 1,
+        }
+        .data(),
+        f.tenant.pubkey(),
+    );
+    let result = f.send(ix, "tenant").unwrap();
+    assert!(result
+        .logs
+        .iter()
+        .any(|line| line.contains("DepositReserveLiquidity")));
+    assert!(f.state().accounted_idle <= 2);
+    let shares = f.state().accounted_receipts;
+    assert!(shares > 0);
+    assert_eq!(f.balance(f.receipts), shares);
+    let saved_reserve = f.svm.get_account(&f.reserve).unwrap();
+    let saved_supply = f.svm.get_account(&f.supply).unwrap();
+    let mut drained = saved_reserve.clone();
+    bytemuck::from_bytes_mut::<Reserve>(&mut drained.data[8..])
+        .liquidity
+        .total_available_amount = 0;
+    f.svm.set_account(f.reserve, drained).unwrap();
+    put(
+        &mut f.svm,
+        f.supply,
+        anchor_spl::token::ID,
+        token_data(TEST_USDC, f.market_authority, 0),
+    );
+    let ix = f.finance(
+        instruction::Redeem {
+            receipt_amount: shares,
+            minimum_received: 0,
+            nonce: 2,
+        }
+        .data(),
+        f.tenant.pubkey(),
+    );
+    assert!(f.send(ix, "tenant").is_err());
+    assert_eq!(f.state().accounted_receipts, shares);
+    f.svm.set_account(f.reserve, saved_reserve).unwrap();
+    f.svm.set_account(f.supply, saved_supply).unwrap();
+    let ix = f.finance(
+        instruction::ReleaseEarnings {
+            amount: 1,
+            nonce: 2,
+        }
+        .data(),
+        f.tenant.pubkey(),
+    );
+    assert!(f.send(ix, "tenant").is_err());
+    let ix = f.finance(
+        instruction::Redeem {
+            receipt_amount: shares,
+            minimum_received: PRINCIPAL + 1,
+            nonce: 2,
+        }
+        .data(),
+        f.tenant.pubkey(),
+    );
+    assert!(f.send(ix, "tenant").is_err());
+    assert_eq!(f.state().accounted_receipts, shares);
+    let ix = f.finance(
+        instruction::Redeem {
+            receipt_amount: shares,
+            minimum_received: PRINCIPAL - 2,
+            nonce: 2,
+        }
+        .data(),
+        f.tenant.pubkey(),
+    );
+    f.send(ix, "tenant").unwrap();
+    assert_eq!(f.state().accounted_receipts, 0);
+    assert!(f.state().accounted_idle >= PRINCIPAL - 2);
+    assert!(f.state().accounted_idle <= PRINCIPAL);
+}
+
+#[test]
+#[ignore = "requires explicit SBF and public KLend fixture paths; accrual is a controlled fixture"]
+fn controlled_earnings_release_then_claim_settlement_preserves_personal_cash() {
+    let mut f = Fixture::new();
+    f.initialize();
+    f.fund();
+    let ix = f.finance(
+        instruction::Supply {
+            amount: PRINCIPAL,
+            nonce: 1,
+        }
+        .data(),
+        f.tenant.pubkey(),
+    );
+    f.send(ix, "tenant").unwrap();
+    f.controlled_yield_fixture(PRINCIPAL + 10_000_000);
+    let shares = f.state().accounted_receipts;
+    let ix = f.finance(
+        instruction::Redeem {
+            receipt_amount: shares,
+            minimum_received: PRINCIPAL + 9_999_998,
+            nonce: 2,
+        }
+        .data(),
+        f.tenant.pubkey(),
+    );
+    f.send(ix, "tenant").unwrap();
+    assert_eq!(f.state().accounted_idle, PRINCIPAL + 10_000_000);
+    let ix = f.finance(
+        instruction::ReleaseEarnings {
+            amount: 10_000_001,
+            nonce: 3,
+        }
+        .data(),
+        f.tenant.pubkey(),
+    );
+    assert!(f.send(ix, "tenant").is_err());
+    let ix = f.finance(
+        instruction::ReleaseEarnings {
+            amount: 10_000_000,
+            nonce: 3,
+        }
+        .data(),
+        f.tenant.pubkey(),
+    );
+    f.send(ix, "tenant").unwrap();
+    assert_eq!(f.balance(f.tenant_token), 10_000_000);
+    assert_eq!(f.state().accounted_idle, PRINCIPAL);
+    let ix = f.party(
+        f.landlord.pubkey(),
+        instruction::ProposeClaim {
+            amount: CLAIM,
+            nonce: 4,
+        }
+        .data(),
+    );
+    f.send(ix, "landlord").unwrap();
+    let ix = f.party(
+        f.tenant.pubkey(),
+        instruction::RespondToClaim {
+            accept: true,
+            nonce: 5,
+        }
+        .data(),
+    );
+    f.send(ix, "tenant").unwrap();
+    let ix = f.settle(f.tenant_token, 6);
+    f.send(ix, "tenant").unwrap();
+    assert_eq!(f.balance(f.landlord_token), CLAIM);
+    assert_eq!(f.balance(f.tenant_token), 10_000_000 + PRINCIPAL - CLAIM);
+    assert_eq!(f.state().released_earnings, 10_000_000);
+    assert_eq!(f.state().phase, Phase::Closed);
+}

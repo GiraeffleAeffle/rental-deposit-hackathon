@@ -1,0 +1,53 @@
+name: Prove Solana SBF
+
+on:
+  push:
+    paths:
+      - '.github/workflows/solana-sbf.yml'
+      - 'programs/rental_escrow/**'
+      - 'Cargo.lock'
+  pull_request:
+    paths:
+      - '.github/workflows/solana-sbf.yml'
+      - 'programs/rental_escrow/**'
+      - 'Cargo.lock'
+
+permissions:
+  contents: read
+
+jobs:
+  staged-svm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal
+      - name: Install pinned Agave build tools
+        shell: bash
+        run: |
+          curl --fail --location --silent --show-error \
+            https://github.com/anza-xyz/agave/releases/download/v4.2.2/solana-release-x86_64-unknown-linux-gnu.tar.bz2 \
+            --output "$RUNNER_TEMP/agave-v4.2.2.tar.bz2"
+          echo '5fc8684f7430038105fde953d4308ed56addf627f658daa61709f345448247ee  '"$RUNNER_TEMP/agave-v4.2.2.tar.bz2" | sha256sum --check
+          mkdir -p "$RUNNER_TEMP/agave"
+          tar -xjf "$RUNNER_TEMP/agave-v4.2.2.tar.bz2" -C "$RUNNER_TEMP/agave"
+          echo "$RUNNER_TEMP/agave/solana-release/bin" >> "$GITHUB_PATH"
+      - name: Build staged test program
+        run: cargo build-sbf --manifest-path programs/rental_escrow/Cargo.toml --features test-deployment --sbf-out-dir "$RUNNER_TEMP/rental-sbf"
+      - name: Download read-only public KLend fixture
+        run: python3 programs/rental_escrow/scripts/download_fixture.py --out "$RUNNER_TEMP/rental-kamino-fixture"
+      - name: Exercise compiled escrow and KLend in LiteSVM
+        env:
+          RENTAL_ESCROW_SBF: ${{ runner.temp }}/rental-sbf/rental_escrow.so
+          KAMINO_FIXTURE_DIR: ${{ runner.temp }}/rental-kamino-fixture
+        run: cargo test --locked -p rental-escrow --features test-deployment --test svm -- --ignored
+      - name: Record binary hash
+        run: sha256sum "$RUNNER_TEMP/rental-sbf/rental_escrow.so" > "$RUNNER_TEMP/rental-sbf/rental_escrow.sha256"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rental-escrow-sbf-local-proof-only
+          path: |
+            ${{ runner.temp }}/rental-sbf/rental_escrow.so
+            ${{ runner.temp }}/rental-sbf/rental_escrow.sha256
+          if-no-files-found: error

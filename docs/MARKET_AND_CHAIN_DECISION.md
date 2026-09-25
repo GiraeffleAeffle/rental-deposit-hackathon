@@ -1,5 +1,7 @@
 # Market and chain decision
 
+> Historical prototype exploration. Current scope and evidence are in the [build spec](HACKATHON_BUILD_SPEC.md) and [implementation status](IMPLEMENTATION_STATUS.md).
+
 Research date: September 21, 2026. This is product research, not legal clearance for a launch.
 
 ## Recommendation

@@ -1,0 +1,16 @@
+[toolchain]
+anchor_version = "0.32.1"
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.localnet]
+rental_escrow = "B1hjmapwssey8AbpjAtw5qF87DvvtuSisGov4kHec7Yc"
+
+[provider]
+cluster = "Localnet"
+wallet = "/private/tmp/rental-solana-test-wallet.json"
+
+[scripts]
+test = "cargo test --workspace --features test-deployment"

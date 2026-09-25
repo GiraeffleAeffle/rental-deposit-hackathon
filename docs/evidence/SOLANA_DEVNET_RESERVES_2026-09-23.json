@@ -1,0 +1,405 @@
+{
+  "observedAt": "2026-09-23T13:08:28.710Z",
+  "rpcUrl": "https://api.devnet.solana.com",
+  "genesisHash": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+  "listingSlot": 502960070,
+  "accountSlot": 502960072,
+  "depositMint": "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+  "accountStateOnly": true,
+  "caveat": "This is a read-only account probe. Operator deployment and transaction receipts are recorded separately; this output alone proves no execution, yield or issuer route.",
+  "candidates": [
+    {
+      "reserve": "9uKMtFU9UJ9DfbwzCReGENb31appi79KTEeDGdCnvMjy",
+      "market": "27MKCQo5qP7ijrwWSMKX2Jeb3PhK2NZmHQ9befWVRS4J",
+      "availableAtomic": "323170899",
+      "lastUpdateSlot": "500240074",
+      "active": true,
+      "compatibleAccountState": true,
+      "liquiditySupply": "Bh45cPkpfRvz9hAs23ye5TowsGbhbh4BXT4AGww8JfES",
+      "receiptMint": "8GoBXfEq3aTiWTxEP2tAaygJMx3LhG764iN5e6gqaLA",
+      "marketAuthority": "72K52Bu9CsGPGEoQRyqmyMR8vQLmHEjzr99UXqpowzXp",
+      "oracleAccounts": [
+        "Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX"
+      ],
+      "availableLiquidityAtomic": "323170899",
+      "marketEmergency": false,
+      "vaultAtomic": "323170899",
+      "receiptMintDecimals": 6,
+      "receiptMintSupplyAtomic": "323070899",
+      "receiptSupplyDifferenceAtomic": "100000",
+      "requiresRefresh": true
+    },
+    {
+      "reserve": "HRwMj8uuoGVWCanKzKvpTWN5ZvXjtjKGxcFbn2qTPKMW",
+      "market": "6aaNTBEmwdN19AAdTwbNrWyUo6iEyiLguxCTePEzSqoH",
+      "availableAtomic": "223641308",
+      "lastUpdateSlot": "502959780",
+      "active": true,
+      "compatibleAccountState": true,
+      "liquiditySupply": "6icVFmuKEsH5dzDwTSrxzrnJ14N27gDKRc2XAxPtB4ep",
+      "receiptMint": "6FY2rwh5wWrtSveAG9t9ANc2YsrChNasVSEpMQubJcXd",
+      "marketAuthority": "7Aoc3MHQkYSB5y3g3ipyFKWF2TBsYdvqNWHbQ2btWXJt",
+      "oracleAccounts": [
+        "Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX"
+      ],
+      "availableLiquidityAtomic": "223641308",
+      "marketEmergency": false,
+      "vaultAtomic": "223641308",
+      "receiptMintDecimals": 6,
+      "receiptMintSupplyAtomic": "223541308",
+      "receiptSupplyDifferenceAtomic": "100000",
+      "requiresRefresh": true
+    },
+    {
+      "reserve": "3j7QYwg91hk7CbyoXYBPRadADPshmfMwo5ci5sCRD5Ys",
+      "market": "9awiMDJpysCLUmQc8HABGKvD1C3sCkMQpVF1fbNyX6U6",
+      "availableAtomic": "42311258",
+      "lastUpdateSlot": "498391780",
+      "active": true,
+      "compatibleAccountState": true,
+      "liquiditySupply": "AjNEgTHUQCVkmhVJfGmKEZUQfeHvFCXcjy8MRn8iB2Nb",
+      "receiptMint": "8ozPJugFZRBy1qUqZJiLKVxpdW3bn8sGJQY6TnBbFKqV",
+      "marketAuthority": "21wU9AsT1DCRWq86jMmg9hv7BwEBE4A2P3eieK5VxmCN",
+      "oracleAccounts": [
+        "Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX"
+      ],
+      "availableLiquidityAtomic": "42311258",
+      "marketEmergency": false,
+      "vaultAtomic": "42311258",
+      "receiptMintDecimals": 6,
+      "receiptMintSupplyAtomic": "72771879",
+      "receiptSupplyDifferenceAtomic": "100000",
+      "requiresRefresh": true
+    },
+    {
+      "reserve": "6DndsViDZXLSsQoq9JxCFijdr91Q3uAXoRsHRqjvxFE6",
+      "market": "9VaMhQPqEjQSByvZfjYFP6iiJLZFKzXTE5MNK9bDg1dr",
+      "availableAtomic": "30100000",
+      "lastUpdateSlot": "485266412",
+      "active": true,
+      "compatibleAccountState": true,
+      "liquiditySupply": "8Pjth87YDBAmGDggBbedJbbms5iSwxngDPKQ5odESRaZ",
+      "receiptMint": "85ihQKzbLNoTfxics4V6GFEj4wuP5PnUmDMr22VbjFi",
+      "marketAuthority": "6jua9tk7ZtgtiXdhP6WNq4zDPfXtfXtaemHrGyUuXso",
+      "oracleAccounts": [
+        "Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX"
+      ],
+      "availableLiquidityAtomic": "30100000",
+      "marketEmergency": false,
+      "vaultAtomic": "30100000",
+      "receiptMintDecimals": 6,
+      "receiptMintSupplyAtomic": "30000000",
+      "receiptSupplyDifferenceAtomic": "100000",
+      "requiresRefresh": true
+    },
+    {
+      "reserve": "XDU6q8pGhErjjG2bF4UDj4ZASUiUTuTDKnKkhHxWwPJ",
+      "market": "69JTojemrLbR4jw1q6bgRHSkLXFe1gveKt8dyMhf69zt",
+      "availableAtomic": "10100000",
+      "lastUpdateSlot": "498365616",
+      "active": true,
+      "compatibleAccountState": true,
+      "liquiditySupply": "931zw738Wu5TfebXJ9fLUc6jjU9v3EDxwoBDmrsW2WS",
+      "receiptMint": "4PmR5ZTz3BUATcNiC4h5K15fh7oE6p9W6Sk89VggaUAS",
+      "marketAuthority": "8QGcuP5VWAaG1pJnTSWVfkskx3eYnpoKMqmzpQcktWY",
+      "oracleAccounts": [
+        "Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX"
+      ],
+      "availableLiquidityAtomic": "10100000",
+      "marketEmergency": false,
+      "vaultAtomic": "10100000",
+      "receiptMintDecimals": 6,
+      "receiptMintSupplyAtomic": "10000000",
+      "receiptSupplyDifferenceAtomic": "100000",
+      "requiresRefresh": true
+    },
+    {
+      "reserve": "993WDToqkuhuRjCa8TnE9UcDhVNu88kpRxzWY7TEsoBs",
+      "market": "HZtN4jSGX27uVMRnVQhk9STHtBdmP4xqRdSDmMgCWrXE",
+      "availableAtomic": "10100000",
+      "lastUpdateSlot": "495124063",
+      "active": true,
+      "compatibleAccountState": true,
+      "liquiditySupply": "DQGBwHYcQC3NV9xrjj6DspsuuTunDBHJiaX66CBTo5U9",
+      "receiptMint": "7fqonSAg9yzk9qvCY1manXRubuxBgQUE4G7nNp8fzmik",
+      "marketAuthority": "69ZuCpJ15zH96C4Zzn67amnghSBfvrby5C7CsK5dv1sW",
+      "oracleAccounts": [
+        "Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX"
+      ],
+      "availableLiquidityAtomic": "10100000",
+      "marketEmergency": false,
+      "vaultAtomic": "10100000",
+      "receiptMintDecimals": 6,
+      "receiptMintSupplyAtomic": "10000000",
+      "receiptSupplyDifferenceAtomic": "100000",
+      "requiresRefresh": true
+    },
+    {
+      "reserve": "5VxVb25AbfBHJTJnhWFnS6g18BZNyZURJN9u8vPQimMN",
+      "market": "DVdYcQJ54Gv7h7Nz98BL9jNi8KdvcCN9idVgWYDnSH2r",
+      "availableAtomic": "9700327",
+      "lastUpdateSlot": "496676583",
+      "active": true,
+      "compatibleAccountState": true,
+      "liquiditySupply": "5fqa81E7BkwmUb7VWrVMMEsbic1kquTya2gJ4KSoar41",
+      "receiptMint": "F2ecQWwttjR14UTsHsnfC5ErLUGeU7HFYKVJkQxBafG6",
+      "marketAuthority": "FBXzZUJkioeKEHBaWYoxggwPjgYTTc6JEUtV9N1zm4oj",
+      "oracleAccounts": [
+        "Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX"
+      ],
+      "availableLiquidityAtomic": "9700327",
+      "marketEmergency": false,
+      "vaultAtomic": "9700327",
+      "receiptMintDecimals": 6,
+      "receiptMintSupplyAtomic": "20000000",
+      "receiptSupplyDifferenceAtomic": "100000",
+      "requiresRefresh": true
+    },
+    {
+      "reserve": "43qqsXJ99ZpnDrwbC7tmCSk7Qrpj5FRCcmzNvajRXetU",
+      "market": "AU3Vg1KFV8zmQ7PCgaYh5DyHfSegQMaoCGtSWb2bRV9v",
+      "availableAtomic": "9700310",
+      "lastUpdateSlot": "496675919",
+      "active": true,
+      "compatibleAccountState": true,
+      "liquiditySupply": "J4PatcWWfyPiFkwUSjeXTkihd2nGE3j5rhvoam9CNAPo",
+      "receiptMint": "6kFmnUKDqcS7pLSKGpPx1uedW92VCsSTUBtAVbN3iUc3",
+      "marketAuthority": "9hp13gfjqCyX6Dgj6kxUePtCzt2ieYekkSBXAAd9hrBZ",
+      "oracleAccounts": [
+        "Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX"
+      ],
+      "availableLiquidityAtomic": "9700310",
+      "marketEmergency": false,
+      "vaultAtomic": "9700310",
+      "receiptMintDecimals": 6,
+      "receiptMintSupplyAtomic": "19998573",
+      "receiptSupplyDifferenceAtomic": "100000",
+      "requiresRefresh": true
+    },
+    {
+      "reserve": "BE6HUc9NFLEAxj1CUmiCjEGRGuQFAr1FFCfLdL7tWfNW",
+      "market": "CoN6SuwiD6PmHhEhfarNY35K2h8nMPpinbQNqHq739xJ",
+      "availableAtomic": "5630000",
+      "lastUpdateSlot": "483350840",
+      "active": true,
+      "compatibleAccountState": true,
+      "liquiditySupply": "CXyXYQ3FZTXdWAJTSSL8tBpLzTHPUKADJdxHg9MfmB86",
+      "receiptMint": "5WKEtKuaGv1VmczZKHeYdap6NxRCNFybprkz23rKuYG2",
+      "marketAuthority": "8CCtPHeve9SRPp4UZKeFHPJLrH13jmPQbCfCA3mTuFF8",
+      "oracleAccounts": [
+        "Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX"
+      ],
+      "availableLiquidityAtomic": "5630000",
+      "marketEmergency": false,
+      "vaultAtomic": "5630000",
+      "receiptMintDecimals": 6,
+      "receiptMintSupplyAtomic": "5530000",
+      "receiptSupplyDifferenceAtomic": "100000",
+      "requiresRefresh": true
+    },
+    {
+      "reserve": "59ybGvVygcPUR2QaGPimy8v1EsyxW1Gb43iCsfLhC6Hm",
+      "market": "Aekg3LQ9Q2mLVLmLCCQNWN3nznmpKFWUnnJtgXAUAgfR",
+      "availableAtomic": "2100396",
+      "lastUpdateSlot": "483513973",
+      "active": true,
+      "compatibleAccountState": true,
+      "liquiditySupply": "5ghPP6AumNtipmSRkaawksVK83XfoKVdCBye3EKzuaEx",
+      "receiptMint": "9USam2K2z7N39KymahcWGNsc1jc3SYqKRNDb29Se9vi1",
+      "marketAuthority": "99sysErzjniwGF2ykDkqdnG9CsqfroggnirBaQxptqY1",
+      "oracleAccounts": [
+        "Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX"
+      ],
+      "availableLiquidityAtomic": "2100396",
+      "marketEmergency": false,
+      "vaultAtomic": "2100396",
+      "receiptMintDecimals": 6,
+      "receiptMintSupplyAtomic": "1999989",
+      "receiptSupplyDifferenceAtomic": "100000",
+      "requiresRefresh": true
+    },
+    {
+      "reserve": "4kPPxAHkk76M4eSz24QnmLPuE6wr2ynMyoDyxs3B5Bf5",
+      "market": "2Gr15yrbzsCJhB8zu5yLdLYPiKTDkfDgu9GzHJMdoNAm",
+      "availableAtomic": "1850001",
+      "lastUpdateSlot": "483337396",
+      "active": true,
+      "compatibleAccountState": true,
+      "liquiditySupply": "6YaBZ1wskR57WfQqyUR5nkxywnLAW19BeURfcknY4PRw",
+      "receiptMint": "WpP2MT4fCPdieHmdMykKR5iLEosueKPSNGevgoHo6Yg",
+      "marketAuthority": "J8MfEX2NpEqHDPe9TM1egpNTHpec44wPcgUytn49CcCJ",
+      "oracleAccounts": [
+        "Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX"
+      ],
+      "availableLiquidityAtomic": "1850001",
+      "marketEmergency": false,
+      "vaultAtomic": "1850001",
+      "receiptMintDecimals": 6,
+      "receiptMintSupplyAtomic": "1750001",
+      "receiptSupplyDifferenceAtomic": "100000",
+      "requiresRefresh": true
+    },
+    {
+      "reserve": "AgwKsQVbpmkikvnDUU1texZaxVYohm4USzk5g2ZErCup",
+      "market": "Fcv68kert8VhyqjD1Cb7bCtPocHm6sWcrKkpQ2vwnYDM",
+      "availableAtomic": "772524",
+      "lastUpdateSlot": "482858967",
+      "active": true,
+      "compatibleAccountState": true,
+      "liquiditySupply": "BJNMYBmV8jjii9BudLzTFuQv2RHMTVHPzPYUpueL6gpC",
+      "receiptMint": "6rAgpwooy5z1WJ9e3SSsmcksimD9oF9oyNJVwxcEwoBL",
+      "marketAuthority": "3rd7T64mgH8PvAzDRuFKkuBmMbjfbMq1DT9Hte6aH1ju",
+      "oracleAccounts": [
+        "Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX"
+      ],
+      "availableLiquidityAtomic": "772524",
+      "marketEmergency": false,
+      "vaultAtomic": "772524",
+      "receiptMintDecimals": 6,
+      "receiptMintSupplyAtomic": "1000000",
+      "receiptSupplyDifferenceAtomic": "100000",
+      "requiresRefresh": true
+    },
+    {
+      "reserve": "5d1RGC9Jr7RVPhtUzdteW5ABkmQQgYjF6pp6oELfjJSt",
+      "market": "6FPM5QzjJ7nA2Ga1bKw3nxYUUwJPscBFK4T5yKAabded",
+      "availableAtomic": "100000",
+      "lastUpdateSlot": "456933411",
+      "active": true,
+      "compatibleAccountState": true,
+      "liquiditySupply": "14EWLXAjhF2u4ULK5rVzQBY2Rs7M7fHcWDBXkNozeg1F",
+      "receiptMint": "CYC7K2UnvHu9nMuDVpzyQzb828vyXGVX4j8Sou42crSx",
+      "marketAuthority": "AwJrTBYejqokJ6AxxdoJCHUx2TiNeckeSSvLRFRPVEPG",
+      "oracleAccounts": [
+        "Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX"
+      ],
+      "availableLiquidityAtomic": "100000",
+      "marketEmergency": false,
+      "vaultAtomic": "100000",
+      "receiptMintDecimals": 6,
+      "receiptMintSupplyAtomic": "0",
+      "receiptSupplyDifferenceAtomic": "100000",
+      "requiresRefresh": true
+    },
+    {
+      "reserve": "6jrwyGApj9dGXJArBCfFbUeRMMMv5M5oApyxChvt7986",
+      "market": "66ARS8zdM9NJocZB1ixKVedoPsbfbzWXXjozGZhUASU",
+      "availableAtomic": "100000",
+      "lastUpdateSlot": "502628968",
+      "active": false,
+      "compatibleAccountState": false,
+      "reason": "Lending operations unavailable"
+    },
+    {
+      "reserve": "86bEaSXc9F7iFdtTjfmyjFoJ5fCaoKDtbQt1g9PFtC4Q",
+      "market": "2V8dGZGHuCnRmVfdooysiu8if7iMJDBQzjBQWhFkTFNi",
+      "availableAtomic": "100000",
+      "lastUpdateSlot": "463687284",
+      "active": true,
+      "compatibleAccountState": true,
+      "liquiditySupply": "nZzYmrwDVz34jB4H4uKtHRtTzunUNtMErrf59YvMxqM",
+      "receiptMint": "5NTUMAZiqFxRu6yKAQ2Ho8Vrox8CETM4U1PUmsZbvA8M",
+      "marketAuthority": "7UwrP7YbXdhKBczDNfhkTJp23Sx8rkDjhX1dwypdoN2j",
+      "oracleAccounts": [
+        "Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX"
+      ],
+      "availableLiquidityAtomic": "100000",
+      "marketEmergency": false,
+      "vaultAtomic": "100000",
+      "receiptMintDecimals": 6,
+      "receiptMintSupplyAtomic": "0",
+      "receiptSupplyDifferenceAtomic": "100000",
+      "requiresRefresh": true
+    },
+    {
+      "reserve": "8xnJfxrbiYrKBBbGJ2aBMHWKhkAQ7veKVVNPL9DfYNhu",
+      "market": "DFwjqtUtNRFFddFVkoScE4DUdhHBTPW5Vw5KXupGcyWs",
+      "availableAtomic": "100000",
+      "lastUpdateSlot": "447538201",
+      "active": true,
+      "compatibleAccountState": true,
+      "liquiditySupply": "GGRHHnbVQu7X9bBUMMaRtrPyXgvw3oBFHqL7Y5xK3UQQ",
+      "receiptMint": "6psDNJwVkSzDPS72WTTKKa1stiUAcexbKbazQW1SpRFD",
+      "marketAuthority": "2H8rTwKtPpkU4rEtJie9q6qPogZbv3uu3T3yMLjLyqHg",
+      "oracleAccounts": [
+        "5SSkXsEKQepHHAewytPVwdej4epN1nxgLVM84L4KXgy7"
+      ],
+      "availableLiquidityAtomic": "100000",
+      "marketEmergency": false,
+      "vaultAtomic": "100000",
+      "receiptMintDecimals": 6,
+      "receiptMintSupplyAtomic": "0",
+      "receiptSupplyDifferenceAtomic": "100000",
+      "requiresRefresh": true
+    },
+    {
+      "reserve": "B5BevgbY9vWewqJfYtafZRNyjrqMvdyvbXV23BMhPaCG",
+      "market": "8V3oTmhrMKhSSsjhrS7bPHLCt7aan6jr7jx2sm4nVC83",
+      "availableAtomic": "100000",
+      "lastUpdateSlot": "463837413",
+      "active": false,
+      "compatibleAccountState": false,
+      "reason": "Lending operations unavailable"
+    },
+    {
+      "reserve": "DKn6r7beyddptFcThDNpZHbZGPBxb9MyXiFenAg9KVrv",
+      "market": "EKeBEcR32Twyb9bFMASQVdvwYhKNimtZbAtxXY225XtW",
+      "availableAtomic": "100000",
+      "lastUpdateSlot": "446131528",
+      "active": false,
+      "compatibleAccountState": false,
+      "reason": "Lending operations unavailable"
+    },
+    {
+      "reserve": "GHEfH8Tuxj9Ec4AtbDEoWUakQLxgNigtfJYqEeZ77yFB",
+      "market": "A2WvMHjnKEapmjetqqniLnyQ7u79QVeYTUQzMGGrAQDh",
+      "availableAtomic": "100000",
+      "lastUpdateSlot": "487652363",
+      "active": true,
+      "compatibleAccountState": true,
+      "liquiditySupply": "Bmq1TWkhTFsYHwGQHThBGHoXRdcBNPs5W8wg2UmUd8Gh",
+      "receiptMint": "EX6m7fbWciroeUeMd2N7FhMJf3jiFTxCfc3RrSYFSdVF",
+      "marketAuthority": "7Z8DfocKhjunst4vLHo3WDfe8STi6fKa2VxW8Eow3koP",
+      "oracleAccounts": [
+        "62V3meUaW7v53p727DnfvmBQuTQN6mvC2fCU5t3gjB2U"
+      ],
+      "availableLiquidityAtomic": "100000",
+      "marketEmergency": false,
+      "vaultAtomic": "100000",
+      "receiptMintDecimals": 6,
+      "receiptMintSupplyAtomic": "0",
+      "receiptSupplyDifferenceAtomic": "100000",
+      "requiresRefresh": true
+    },
+    {
+      "reserve": "HSyb1Vy17yFpVmTsn4oUYn2w7kApZavNB1FzH8thtM2T",
+      "market": "BXcz9jqE4E74axzMYzqzgbhaiuLVgTw38jD28p47686D",
+      "availableAtomic": "100000",
+      "lastUpdateSlot": "443983329",
+      "active": true,
+      "compatibleAccountState": true,
+      "liquiditySupply": "HqYdXePRekahATbr3bu8AvQHcBpVUW9xVTDPj8LXwYMz",
+      "receiptMint": "5833d5FTWmnpqLgDr9Mbi43CYuxzSt1o2mdDRV8HyyNE",
+      "marketAuthority": "FgYvL5tVc74e5WXKfYeSNpFALo33218aM85uRhMaiEQW",
+      "oracleAccounts": [
+        "2fdXFc6gpteSKVMCMRNrnvaYd1j2vC1jNDXitubryBdw"
+      ],
+      "availableLiquidityAtomic": "100000",
+      "marketEmergency": false,
+      "vaultAtomic": "100000",
+      "receiptMintDecimals": 6,
+      "receiptMintSupplyAtomic": "0",
+      "receiptSupplyDifferenceAtomic": "100000",
+      "requiresRefresh": true
+    },
+    {
+      "reserve": "DHP5csgS8ba2dFAqgM5dqNXoUw3x9EWaPwYXVACQ4Wxn",
+      "market": "HqCoqWT42Qdg1fbsWFo6TNCkH6eSY2MtxHFEkPoBvCHm",
+      "availableAtomic": "0",
+      "lastUpdateSlot": "361770310",
+      "active": true,
+      "compatibleAccountState": false,
+      "reason": "Lending account identity mismatch"
+    }
+  ]
+}

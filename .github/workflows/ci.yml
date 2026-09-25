@@ -1,4 +1,4 @@
-name: Validate prototype
+name: Validate workspace
 on:
   push:
   pull_request:
@@ -7,9 +7,9 @@ permissions:
   contents: read
 
 jobs:
-  validate:
+  application:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -20,3 +20,41 @@ jobs:
       - run: npm test
       - run: npm run lint
       - run: npm run build
+      - name: Run local HTTP acceptance
+        shell: bash
+        run: |
+          npm run setup
+          npm run start > /tmp/rental-web.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" || true' EXIT
+          for attempt in {1..40}; do
+            if curl --fail --silent http://127.0.0.1:4175/api/status > /dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          npm run acceptance
+          npm run reconcile
+  evm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.4.4
+      - run: forge test --root contracts/evm -vv
+      - run: node contracts/evm/script/check-runtime.mjs
+  solana-host:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal
+      - run: cargo +stable test --locked -p rental-escrow --features test-deployment --lib

@@ -1,0 +1,70 @@
+import { parseAbi } from 'viem';
+
+export const rentalEscrowAbi = parseAbi([
+  'function asset() view returns (address)',
+  'function vault() view returns (address)',
+  'function tenant() view returns (address)',
+  'function landlord() view returns (address)',
+  'function arbitrator() view returns (address)',
+  'function personalWallet() view returns (address)',
+  'function fixedChainId() view returns (uint256)',
+  'function agreementHash() view returns (bytes32)',
+  'function securityRequirement() view returns (uint256)',
+  'function earningsReleaseAllowed() view returns (bool)',
+  'function state() view returns (uint8)',
+  'function nonce() view returns (uint256)',
+  'function trackedShares() view returns (uint256)',
+  'function totalSupplied() view returns (uint256)',
+  'function totalRedeemed() view returns (uint256)',
+  'function releasedEarnings() view returns (uint256)',
+  'function securityValue() view returns (uint256)',
+  'function releasableEarnings() view returns (uint256)',
+  'function claimAmount() view returns (uint256)',
+  'function approvedLandlordAmount() view returns (uint256)',
+  'function minimumSettlementAssets() view returns (uint256)',
+  'function settledLandlordAmount() view returns (uint256)',
+  'function settledTenantAmount() view returns (uint256)',
+  'function executeSigned((address signer,uint8 kind,uint256 amount,uint256 limit,bytes32 evidence,uint256 expectedNonce,uint256 deadline) action,bytes signature)',
+  'function actionDigest((address signer,uint8 kind,uint256 amount,uint256 limit,bytes32 evidence,uint256 expectedNonce,uint256 deadline) action) view returns (bytes32)',
+  'function acceptAgreement(uint256 expectedNonce, uint256 deadline)',
+  'function fund(uint256 expectedNonce, uint256 deadline)',
+  'function supply(uint256 assets, uint256 minShares, uint256 expectedNonce, uint256 deadline)',
+  'function releaseEarnings(uint256 assets, uint256 maxSharesBurned, uint256 expectedNonce, uint256 deadline)',
+  'function proposeClaim(uint256 assets, bytes32 evidenceHash, uint256 expectedNonce, uint256 deadline)',
+  'function acceptClaim(uint256 minimumAssets, uint256 expectedNonce, uint256 deadline)',
+  'function contestClaim(uint256 expectedNonce, uint256 deadline)',
+  'function resolveClaim(uint256 landlordAssets, uint256 minimumAssets, uint256 expectedNonce, uint256 deadline)',
+  'function settle(uint256 minRedeemedAssets, uint256 expectedNonce, uint256 deadline)',
+  'event AgreementAccepted(address indexed party, uint256 indexed operationNonce)',
+  'event Funded(uint256 assets, uint256 indexed operationNonce)',
+  'event Supplied(uint256 assets, uint256 shares, uint256 indexed operationNonce)',
+  'event EarningsReleased(address indexed tenantWallet, uint256 assets, uint256 indexed operationNonce)',
+  'event ClaimProposed(uint256 assets, bytes32 evidenceHash, uint256 indexed operationNonce)',
+  'event ClaimContested(uint256 indexed operationNonce)',
+  'event SettlementApproved(address indexed decisionMaker, uint256 landlordAssets, uint256 minimumAssets, uint256 indexed operationNonce)',
+  'event Settled(uint256 landlordAssets, uint256 tenantAssets, uint256 indexed operationNonce)',
+  'event SignedOperationExecuted(address indexed signer, bytes32 indexed digest, uint256 indexed operationNonce)',
+]);
+
+export const erc20Abi = parseAbi([
+  'function balanceOf(address owner) view returns (uint256)',
+  'function decimals() view returns (uint8)',
+  'function allowance(address owner,address spender) view returns (uint256)',
+  'function approve(address spender,uint256 amount) returns (bool)',
+  'function transfer(address recipient,uint256 amount) returns (bool)',
+]);
+
+export const stockTokenAbi = parseAbi([
+  'function balanceOf(address owner) view returns (uint256)',
+  'function uiMultiplier() view returns (uint256)',
+  'function balanceOfUI(address owner) view returns (uint256)',
+]);
+
+export const morphoVaultAbi = parseAbi([
+  'function asset() view returns (address)',
+  'function balanceOf(address owner) view returns (uint256)',
+  'function decimals() view returns (uint8)',
+  'function previewRedeem(uint256 shares) view returns (uint256)',
+  'function previewWithdraw(uint256 assets) view returns (uint256)',
+  'function previewDeposit(uint256 assets) view returns (uint256)',
+]);
